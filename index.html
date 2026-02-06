@@ -1,24 +1,72 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    
+    <!-- SEO Meta Tags -->
+    <title>Melhor News SC - O Portal de Notícias de Santa Catarina</title>
+    <meta name="description" content="O portal de notícias mais completo de Santa Catarina. Política, esportes, economia, cultura e muito mais. Informação de qualidade para o catarinense." />
+    <meta name="keywords" content="notícias Santa Catarina, notícias SC, Florianópolis, Joinville, Blumenau, política SC, esportes SC" />
+    <meta name="author" content="Melhor News SC" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <meta property="og:url" content="https://melhornewssc.com.br/" />
+    <meta property="og:title" content="Melhor News SC - O Portal de Notícias de Santa Catarina" />
+    <meta property="og:description" content="O portal de notícias mais completo de Santa Catarina. Informação de qualidade para o catarinense." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Melhor News SC" />
+    
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:url" content="https://melhornewssc.com.br/" />
+    <meta name="twitter:title" content="Melhor News SC - O Portal de Notícias de Santa Catarina" />
+    <meta name="twitter:description" content="O portal de notícias mais completo de Santa Catarina. Informação de qualidade para o catarinense." />
+    <meta name="twitter:image" content="/og-image.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://melhornewssc.com.br/" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#1a365d" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "NewsMediaOrganization",
+      "name": "Melhor News SC",
+      "url": "https://melhornewssc.com.br",
+      "logo": "https://melhornewssc.com.br/logo.png",
+      "description": "O portal de notícias mais completo de Santa Catarina",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Av. Beira Mar Norte, 1234",
+        "addressLocality": "Florianópolis",
+        "addressRegion": "SC",
+        "postalCode": "88015-000",
+        "addressCountry": "BR"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+55-48-99999-9999",
+        "contactType": "customer service"
+      },
+      "sameAs": [
+        "https://facebook.com/melhornewssc",
+        "https://instagram.com/melhornewssc",
+        "https://twitter.com/melhornewssc",
+        "https://youtube.com/melhornewssc"
+      ]
+    }
+    </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
