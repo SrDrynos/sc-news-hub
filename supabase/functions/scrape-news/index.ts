@@ -217,7 +217,9 @@ Deno.serve(async (req) => {
 
         for (const section of sections.slice(0, 10)) {
           const lines = section.trim().split("\n");
-          const title = lines[0]?.replace(/^#+\s*/, "").replace(/\[|\]/g, "").trim();
+          let title = lines[0]?.replace(/^#+\s*/, "").replace(/\[|\]/g, "").trim();
+          // Remove URLs from title
+          title = title.replace(/\(https?:\/\/[^\)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
           if (!title || title.length < 10 || title.length > 300) continue;
 
           // Check for duplicate
