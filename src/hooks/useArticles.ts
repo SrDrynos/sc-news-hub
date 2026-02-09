@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Article {
   id: string;
   title: string;
+  slug: string | null;
   content: string | null;
   excerpt: string | null;
   image_url: string | null;
@@ -33,7 +34,7 @@ export const usePublishedArticles = (categorySlug?: string, regionSlug?: string,
         .eq("status", "published")
         .lte("published_at", new Date().toISOString())
         .order("published_at", { ascending: false })
-        .limit(limit);
+        .limit(limit) as any;
 
       if (categorySlug) {
         query = query.eq("categories.slug", categorySlug);
@@ -58,13 +59,26 @@ export const useArticleBySlug = (slug: string) => {
   return useQuery({
     queryKey: ["article", slug],
     queryFn: async () => {
-      // We use title as slug approximation - in production, add a slug column
-      const { data, error } = await supabase
+      // Try by slug first, then by id
+      let { data, error } = await (supabase
         .from("articles")
         .select("*, categories(name, slug), regions(name, slug)")
-        .eq("status", "published")
-        .limit(1)
+        .eq("status", "published") as any)
+        .eq("slug", slug)
         .maybeSingle();
+      
+      if (!data) {
+        // Fallback: try by id
+        const result = await supabase
+          .from("articles")
+          .select("*, categories(name, slug), regions(name, slug)")
+          .eq("status", "published")
+          .eq("id", slug)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      }
+
       if (error) throw error;
       return data as Article | null;
     },

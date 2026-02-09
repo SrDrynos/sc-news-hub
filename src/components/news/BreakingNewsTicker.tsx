@@ -1,8 +1,13 @@
 import { AlertCircle } from "lucide-react";
-import { breakingNews } from "@/data/mockNews";
+import { usePublishedArticles } from "@/hooks/useArticles";
 
 const BreakingNewsTicker = () => {
-  if (breakingNews.length === 0) return null;
+  const { data: articles = [] } = usePublishedArticles(undefined, undefined, 5);
+
+  // Use the 3 most recent articles as breaking news
+  const breakingItems = articles.slice(0, 3).map((a) => a.title);
+
+  if (breakingItems.length === 0) return null;
 
   return (
     <div className="breaking-news-ticker">
@@ -13,10 +18,8 @@ const BreakingNewsTicker = () => {
         </div>
         <div className="overflow-hidden flex-1">
           <div className="ticker-content">
-            {breakingNews.map((news, index) => (
-              <span key={index} className="mx-8">
-                {news}
-              </span>
+            {breakingItems.map((news, index) => (
+              <span key={index} className="mx-8">{news}</span>
             ))}
           </div>
         </div>

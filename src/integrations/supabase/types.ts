@@ -28,6 +28,7 @@ export type Database = {
           score: number | null
           score_criteria: Json | null
           scraped_at: string | null
+          slug: string | null
           source_name: string | null
           source_url: string | null
           status: Database["public"]["Enums"]["article_status"]
@@ -47,6 +48,7 @@ export type Database = {
           score?: number | null
           score_criteria?: Json | null
           scraped_at?: string | null
+          slug?: string | null
           source_name?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["article_status"]
@@ -66,6 +68,7 @@ export type Database = {
           score?: number | null
           score_criteria?: Json | null
           scraped_at?: string | null
+          slug?: string | null
           source_name?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["article_status"]
