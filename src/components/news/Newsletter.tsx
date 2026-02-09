@@ -2,17 +2,34 @@ import { useState } from "react";
 import { Mail, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Newsletter = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("newsletter_subscribers")
+      .insert({ email: email.toLowerCase() } as any);
+
+    if (error) {
+      if (error.code === "23505") {
+        toast({ title: "Você já está inscrito!", description: "Este e-mail já está na nossa lista." });
+      } else {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      }
+    } else {
       setSubscribed(true);
-      setEmail("");
     }
+    setLoading(false);
   };
 
   return (
@@ -44,8 +61,8 @@ const Newsletter = () => {
                 className="flex-1 bg-primary-foreground text-foreground"
                 required
               />
-              <Button type="submit" variant="secondary" className="px-8">
-                Inscrever-se
+              <Button type="submit" variant="secondary" className="px-8" disabled={loading}>
+                {loading ? "Inscrevendo..." : "Inscrever-se"}
               </Button>
             </form>
           )}
