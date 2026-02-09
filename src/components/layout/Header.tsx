@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter } from "lucide-react";
+import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { categories } from "@/data/mockNews";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
+  const { isStaff } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -139,7 +141,19 @@ const Header = () => {
                 </li>
               ))}
             </ul>
-            <div className="flex items-center">
+            <div className="flex items-center gap-1">
+              {isStaff && (
+                <Link to="/admin">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-primary-foreground hover:bg-secondary"
+                    aria-label="Painel Admin"
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
