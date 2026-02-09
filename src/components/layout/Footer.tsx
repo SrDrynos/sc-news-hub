@@ -133,11 +133,19 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link
+              <Link
                   to="/termos"
                   className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
                 >
                   Termos de Uso
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/auth"
+                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+                >
+                  Área Restrita
                 </Link>
               </li>
             </ul>
