@@ -1,19 +1,48 @@
 import { useState } from "react";
 import { useAllArticles, useUpdateArticle, useDeleteArticle, useCategories, useRegions } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2, Eye, CheckCircle, XCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2, CheckCircle, XCircle, Plus } from "lucide-react";
 import type { Article } from "@/hooks/useArticles";
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .substring(0, 120);
+}
+
+const emptyArticle = {
+  title: "",
+  excerpt: "",
+  content: "",
+  image_url: "",
+  category_id: "",
+  region_id: "",
+  author: "Redação Melhor News",
+  source_name: "",
+  source_url: "",
+  status: "draft" as const,
+};
 
 const ArticlesPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [editArticle, setEditArticle] = useState<Article | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newArticle, setNewArticle] = useState(emptyArticle);
+  const [creating, setCreating] = useState(false);
+
   const { data: articles = [], isLoading } = useAllArticles(statusFilter || undefined);
   const { data: categories = [] } = useCategories();
   const { data: regions = [] } = useRegions();
@@ -21,6 +50,7 @@ const ArticlesPage = () => {
   const deleteArticle = useDeleteArticle();
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const handlePublish = async (article: Article) => {
     await updateArticle.mutateAsync({
@@ -53,26 +83,133 @@ const ArticlesPage = () => {
       category_id: editArticle.category_id,
       region_id: editArticle.region_id,
       author: editArticle.author,
+      source_name: editArticle.source_name,
+      source_url: editArticle.source_url,
     });
     setEditArticle(null);
     toast({ title: "Artigo atualizado!" });
   };
 
+  const handleCreate = async (publishNow: boolean) => {
+    if (!newArticle.title.trim()) {
+      toast({ title: "Título é obrigatório", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const slug = generateSlug(newArticle.title);
+      const { error } = await supabase.from("articles").insert({
+        title: newArticle.title,
+        slug,
+        excerpt: newArticle.excerpt || null,
+        content: newArticle.content || null,
+        image_url: newArticle.image_url || null,
+        category_id: newArticle.category_id || null,
+        region_id: newArticle.region_id || null,
+        author: newArticle.author || null,
+        source_name: newArticle.source_name || null,
+        source_url: newArticle.source_url || null,
+        status: publishNow ? "published" : "draft",
+        published_at: publishNow ? new Date().toISOString() : null,
+        score: 8,
+      } as any);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["articles"] });
+      setShowCreate(false);
+      setNewArticle(emptyArticle);
+      toast({ title: publishNow ? "Notícia publicada!" : "Rascunho salvo!" });
+    } catch (e: any) {
+      toast({ title: "Erro ao criar notícia", description: e.message, variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions }: {
+    data: any;
+    onChange: (d: any) => void;
+    onSave: () => void;
+    saveLabel: string;
+    extraActions?: React.ReactNode;
+  }) => (
+    <div className="space-y-4">
+      <div>
+        <Label>Título *</Label>
+        <Input placeholder="Título da notícia" value={data.title} onChange={(e) => onChange({ ...data, title: e.target.value })} />
+      </div>
+      <div>
+        <Label>Subtítulo (linha fina)</Label>
+        <Textarea placeholder="Resumo explicativo da notícia" value={data.excerpt || ""} onChange={(e) => onChange({ ...data, excerpt: e.target.value })} rows={2} />
+      </div>
+      <div>
+        <Label>Conteúdo</Label>
+        <Textarea placeholder="Corpo da notícia em parágrafos..." value={data.content || ""} onChange={(e) => onChange({ ...data, content: e.target.value })} rows={12} />
+      </div>
+      <div>
+        <Label>URL da imagem</Label>
+        <Input placeholder="https://..." value={data.image_url || ""} onChange={(e) => onChange({ ...data, image_url: e.target.value })} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Categoria</Label>
+          <Select value={data.category_id || ""} onValueChange={(v) => onChange({ ...data, category_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Região</Label>
+          <Select value={data.region_id || ""} onValueChange={(v) => onChange({ ...data, region_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+            <SelectContent>
+              {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Autor</Label>
+          <Input placeholder="Redação Melhor News" value={data.author || ""} onChange={(e) => onChange({ ...data, author: e.target.value })} />
+        </div>
+        <div>
+          <Label>Nome da fonte</Label>
+          <Input placeholder="Ex: Folha Regional" value={data.source_name || ""} onChange={(e) => onChange({ ...data, source_name: e.target.value })} />
+        </div>
+      </div>
+      <div>
+        <Label>URL da fonte original</Label>
+        <Input placeholder="https://..." value={data.source_url || ""} onChange={(e) => onChange({ ...data, source_url: e.target.value })} />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        {extraActions}
+        <Button onClick={onSave}>{saveLabel}</Button>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-heading font-bold">Artigos</h1>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Todos os status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="published">Publicados</SelectItem>
-            <SelectItem value="draft">Rascunhos</SelectItem>
-            <SelectItem value="recycled">Reciclagem</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-3">
+          <Button onClick={() => { setNewArticle(emptyArticle); setShowCreate(true); }} className="gap-2">
+            <Plus className="h-4 w-4" /> Nova Notícia
+          </Button>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="published">Publicados</SelectItem>
+              <SelectItem value="draft">Rascunhos</SelectItem>
+              <SelectItem value="recycled">Reciclagem</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -130,6 +267,29 @@ const ArticlesPage = () => {
         </div>
       )}
 
+      {/* Create Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nova Notícia</DialogTitle>
+          </DialogHeader>
+          <ArticleForm
+            data={newArticle}
+            onChange={setNewArticle}
+            onSave={() => handleCreate(false)}
+            saveLabel="Salvar Rascunho"
+            extraActions={
+              <>
+                <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+                <Button variant="secondary" onClick={() => handleCreate(true)} disabled={creating}>
+                  Publicar Agora
+                </Button>
+              </>
+            }
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Dialog */}
       <Dialog open={!!editArticle} onOpenChange={() => setEditArticle(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -137,63 +297,13 @@ const ArticlesPage = () => {
             <DialogTitle>Editar Artigo</DialogTitle>
           </DialogHeader>
           {editArticle && (
-            <div className="space-y-4">
-              <Input
-                placeholder="Título"
-                value={editArticle.title}
-                onChange={(e) => setEditArticle({ ...editArticle, title: e.target.value })}
-              />
-              <Input
-                placeholder="URL da imagem"
-                value={editArticle.image_url || ""}
-                onChange={(e) => setEditArticle({ ...editArticle, image_url: e.target.value })}
-              />
-              <Textarea
-                placeholder="Resumo"
-                value={editArticle.excerpt || ""}
-                onChange={(e) => setEditArticle({ ...editArticle, excerpt: e.target.value })}
-                rows={3}
-              />
-              <Textarea
-                placeholder="Conteúdo"
-                value={editArticle.content || ""}
-                onChange={(e) => setEditArticle({ ...editArticle, content: e.target.value })}
-                rows={10}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  value={editArticle.category_id || ""}
-                  onValueChange={(v) => setEditArticle({ ...editArticle, category_id: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={editArticle.region_id || ""}
-                  onValueChange={(v) => setEditArticle({ ...editArticle, region_id: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Região" /></SelectTrigger>
-                  <SelectContent>
-                    {regions.map((r: any) => (
-                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input
-                placeholder="Autor"
-                value={editArticle.author || ""}
-                onChange={(e) => setEditArticle({ ...editArticle, author: e.target.value })}
-              />
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditArticle(null)}>Cancelar</Button>
-                <Button onClick={handleSaveEdit}>Salvar</Button>
-              </div>
-            </div>
+            <ArticleForm
+              data={editArticle}
+              onChange={setEditArticle}
+              onSave={handleSaveEdit}
+              saveLabel="Salvar"
+              extraActions={<Button variant="outline" onClick={() => setEditArticle(null)}>Cancelar</Button>}
+            />
           )}
         </DialogContent>
       </Dialog>
