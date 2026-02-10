@@ -352,9 +352,9 @@ Deno.serve(async (req) => {
 
             // Extract title from metadata or first heading
             let title = metadata.title || "";
-            // Clean title: remove site name suffixes
-            title = title.replace(/\s*[-|–—]\s*(NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal).*$/i, "").trim();
-            title = title.replace(/\(https?:\/\/[^)]+\)/g, "").trim();
+            // Clean title: remove site name suffixes like "- Notícias de Tubarão", "| Portal SC"
+            title = title.replace(/\s*[-|–—]\s*(Notícias|NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal|Correio|Gazeta|Tribuna|Rádio|TV|SC|Santa Catarina).*$/i, "").trim();
+            title = title.replace(/\(https?:\/\/[^)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
             if (!title || title.length < 10) {
               const firstLine = cleanedContent.split("\n")[0]?.replace(/^#+\s*/, "").trim();
               title = firstLine || "";
