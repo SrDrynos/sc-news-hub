@@ -1,10 +1,11 @@
 import { useParams, Link } from "react-router-dom";
-import { Calendar, ChevronRight, ArrowLeft, ExternalLink, Clock } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import Layout from "@/components/layout/Layout";
 import ShareButtons from "@/components/news/ShareButtons";
+import ArticleContent from "@/components/news/ArticleContent";
+import ArticleMeta from "@/components/news/ArticleMeta";
+import ArticleSource from "@/components/news/ArticleSource";
 import NewsCard from "@/components/news/NewsCard";
 import Sidebar from "@/components/news/Sidebar";
 import { useArticleBySlug, usePublishedArticles } from "@/hooks/useArticles";
@@ -18,7 +19,6 @@ function estimateReadingTime(text: string): number {
 }
 
 function generateSchemaOrg(article: any, url: string) {
-  const cat = article.categories;
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -27,17 +27,14 @@ function generateSchemaOrg(article: any, url: string) {
     image: article.image_url || PLACEHOLDER_IMAGE,
     datePublished: article.published_at,
     dateModified: article.updated_at || article.published_at,
-    author: {
-      "@type": "Organization",
-      name: article.source_name || "Melhor News SC",
-    },
+    author: { "@type": "Organization", name: "Redação Melhor News" },
     publisher: {
       "@type": "Organization",
       name: "Melhor News SC",
       logo: { "@type": "ImageObject", url: `${window.location.origin}/favicon.ico` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    articleSection: cat?.name || "Notícias",
+    articleSection: article.categories?.name || "Notícias",
   };
 }
 
@@ -52,8 +49,10 @@ const ArticlePage = () => {
     return (
       <Layout>
         <div className="container py-8 max-w-4xl mx-auto">
-          <Skeleton className="h-8 w-3/4 mb-4" />
-          <Skeleton className="h-5 w-1/2 mb-6" />
+          <Skeleton className="h-6 w-40 mb-4" />
+          <Skeleton className="h-10 w-full mb-3" />
+          <Skeleton className="h-6 w-3/4 mb-6" />
+          <Skeleton className="h-4 w-1/2 mb-6" />
           <Skeleton className="aspect-video w-full rounded-lg mb-6" />
           <Skeleton className="h-4 w-full mb-2" />
           <Skeleton className="h-4 w-full mb-2" />
@@ -82,18 +81,6 @@ const ArticlePage = () => {
   const catName = (article as any).categories?.name || "Notícias";
   const imageUrl = article.image_url || PLACEHOLDER_IMAGE;
   const readingTime = estimateReadingTime(article.content || "");
-
-  const formatPublishDate = (date: string | null) => {
-    if (!date) return "";
-    return format(new Date(date), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
-  };
-
-  // Clean content: split into paragraphs, remove empty ones
-  const paragraphs = (article.content || "")
-    .split("\n\n")
-    .map((p: string) => p.trim())
-    .filter((p: string) => p.length > 0);
-
   const metaDescription = (article.excerpt || article.title).substring(0, 160);
 
   return (
@@ -118,60 +105,51 @@ const ArticlePage = () => {
 
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Article Content */}
+          {/* Main Article */}
           <article className="lg:col-span-2">
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+            {/* 1. Breadcrumb */}
+            <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-5" aria-label="Breadcrumb">
               <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
               <Link to={`/categoria/${catSlug}`} className="hover:text-foreground transition-colors">{catName}</Link>
-              <ChevronRight className="h-4 w-4" />
-              <span className="text-foreground truncate max-w-[200px]">{article.title}</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span className="text-foreground truncate max-w-[220px]">{article.title}</span>
             </nav>
 
-            {/* Category Badge */}
-            <span className={`category-badge category-badge-${catSlug} mb-4`}>{catName}</span>
+            {/* 2. Category Badge */}
+            <span className={`category-badge category-badge-${catSlug} mb-3 inline-block`}>{catName}</span>
 
-            {/* H1 Title */}
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 leading-tight text-foreground">
+            {/* 3. H1 Title */}
+            <h1 className="text-3xl md:text-4xl lg:text-[2.75rem] font-heading font-bold mb-4 leading-tight text-foreground">
               {article.title}
             </h1>
 
-            {/* Subtitle */}
+            {/* 4. Subtitle / Excerpt */}
             {article.excerpt && (
-              <p className="text-xl text-muted-foreground mb-6 leading-relaxed font-medium">
+              <p className="text-lg md:text-xl text-muted-foreground mb-5 leading-relaxed">
                 {article.excerpt}
               </p>
             )}
 
-            {/* Meta Bar */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
-              <span className="font-medium text-foreground">
-                Fonte: {article.source_name || "Melhor News SC"}
-              </span>
-              {article.published_at && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatPublishDate(article.published_at)}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {readingTime} min de leitura
-              </span>
-            </div>
+            {/* 5. Meta: Editorial, Date, Time, Reading Time */}
+            <ArticleMeta
+              publishedAt={article.published_at}
+              readingTime={readingTime}
+              categoryName={catName}
+              categorySlug={catSlug}
+            />
 
-            {/* Share */}
+            {/* 6. Share Buttons */}
             <div className="mb-6">
               <ShareButtons url={currentUrl} title={article.title} />
             </div>
 
-            {/* Ad: Top of article */}
+            {/* Ad: Top of article (728x90 leaderboard) */}
             <div className="mb-8">
               <div className="ad-banner-top"><span>Anúncio 728x90</span></div>
             </div>
 
-            {/* Featured Image */}
+            {/* 7. Featured Image */}
             <figure className="mb-8">
               <img
                 src={imageUrl}
@@ -181,45 +159,20 @@ const ArticlePage = () => {
                 onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE; }}
               />
               <figcaption className="text-sm text-muted-foreground mt-2 text-center">
-                {article.source_name ? `Foto: Reprodução / ${article.source_name}` : "Foto: Reprodução"}
+                Foto: Reprodução{article.source_name ? ` / ${article.source_name}` : ""}
               </figcaption>
             </figure>
 
-            {/* Article Body */}
-            <div className="prose prose-lg max-w-none mb-8">
-              {paragraphs.map((paragraph: string, index: number) => (
-                <div key={index}>
-                  <p className="text-foreground leading-relaxed mb-5 text-lg">{paragraph}</p>
-                  {/* Ad after 3rd paragraph */}
-                  {index === 2 && paragraphs.length > 4 && (
-                    <div className="my-8 not-prose">
-                      <div className="ad-banner h-[250px]"><span>Anúncio 300x250</span></div>
-                    </div>
-                  )}
-                </div>
-              ))}
+            {/* 8. Article Body - Clean rendered content */}
+            <ArticleContent content={article.content || ""} />
+
+            {/* 9. Source Credit - Bottom only */}
+            <div className="mt-8 mb-6">
+              <ArticleSource sourceName={article.source_name} sourceUrl={article.source_url} />
             </div>
 
-            {/* Source Credit */}
-            {article.source_url && (
-              <div className="bg-muted rounded-lg p-4 mb-8 text-sm text-muted-foreground">
-                <p>
-                  Informações originais publicadas por{" "}
-                  <strong className="text-foreground">{article.source_name}</strong>.{" "}
-                  <a
-                    href={article.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="text-secondary hover:underline inline-flex items-center gap-1"
-                  >
-                    Ver matéria original <ExternalLink className="h-3 w-3" />
-                  </a>
-                </p>
-              </div>
-            )}
-
             {/* Share bottom */}
-            <div className="mb-8 pt-8 border-t border-border">
+            <div className="mb-8 pt-6 border-t border-border">
               <ShareButtons url={currentUrl} title={article.title} />
             </div>
 
@@ -228,7 +181,7 @@ const ArticlePage = () => {
               <div className="ad-banner h-[250px]"><span>Anúncio 300x250</span></div>
             </div>
 
-            {/* Related News - Internal only */}
+            {/* Related News */}
             {related.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-2xl font-heading font-bold mb-6 pb-3 border-b-2 border-secondary">
