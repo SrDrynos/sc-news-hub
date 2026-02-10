@@ -5,6 +5,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const PLACEHOLDER_IMAGE = "/images/placeholder-news.jpg";
+
 const FeaturedNews = () => {
   const { data: featured, isLoading: featLoading } = useFeaturedArticle();
   const { data: latest = [], isLoading: latestLoading } = usePublishedArticles(undefined, undefined, 5);
@@ -14,6 +16,10 @@ const FeaturedNews = () => {
   const formatDate = (date: string | null) => {
     if (!date) return "";
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
   };
 
   if (featLoading || latestLoading) {
@@ -42,8 +48,8 @@ const FeaturedNews = () => {
   }
 
   const featuredUrl = `/noticia/${featured.slug || featured.id}`;
-  const categorySlug = (featured as any).categories?.slug || "sc";
-  const categoryName = (featured as any).categories?.name || "Geral";
+  const categorySlug = (featured as any).categories?.slug || "geral";
+  const categoryName = (featured as any).categories?.name || "Notícias";
 
   return (
     <section className="py-6">
@@ -52,13 +58,23 @@ const FeaturedNews = () => {
           <div className="lg:col-span-2">
             <Link to={featuredUrl} className="group block">
               <article className="news-card bg-card rounded-lg overflow-hidden shadow-md">
-                <div className="news-card-image aspect-video relative">
-                  <img src={featured.image_url || "/placeholder.svg"} alt={featured.title} className="w-full h-full object-cover" loading="eager" />
+                <div className="news-card-image aspect-video relative bg-muted">
+                  <img
+                    src={featured.image_url || PLACEHOLDER_IMAGE}
+                    alt={featured.title}
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    onError={handleImageError}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                     <span className={`category-badge category-badge-${categorySlug} mb-3`}>{categoryName}</span>
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-bold mb-3 group-hover:text-secondary transition-colors">{featured.title}</h1>
-                    <p className="text-white/90 text-lg mb-4 line-clamp-2">{featured.excerpt}</p>
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-bold mb-3 group-hover:text-secondary transition-colors">
+                      {featured.title}
+                    </h1>
+                    {featured.excerpt && (
+                      <p className="text-white/90 text-lg mb-4 line-clamp-2">{featured.excerpt}</p>
+                    )}
                     <div className="flex items-center gap-4 text-sm text-white/80">
                       {featured.source_name && <span>Fonte: {featured.source_name}</span>}
                       <span className="flex items-center gap-1">
@@ -76,12 +92,18 @@ const FeaturedNews = () => {
             {secondaryNews.map((news) => (
               <Link key={news.id} to={`/noticia/${news.slug || news.id}`} className="group block">
                 <article className="news-card bg-card rounded-lg overflow-hidden shadow-sm flex gap-4 p-3">
-                  <div className="news-card-image w-24 h-24 flex-shrink-0 rounded overflow-hidden">
-                    <img src={news.image_url || "/placeholder.svg"} alt={news.title} className="w-full h-full object-cover" loading="lazy" />
+                  <div className="news-card-image w-24 h-24 flex-shrink-0 rounded overflow-hidden bg-muted">
+                    <img
+                      src={news.image_url || PLACEHOLDER_IMAGE}
+                      alt={news.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={handleImageError}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className={`category-badge category-badge-${(news as any).categories?.slug || "sc"} mb-2 text-[10px]`}>
-                      {(news as any).categories?.name || "Geral"}
+                    <span className={`category-badge category-badge-${(news as any).categories?.slug || "geral"} mb-2 text-[10px]`}>
+                      {(news as any).categories?.name || "Notícias"}
                     </span>
                     <h3 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{formatDate(news.published_at)}</p>
