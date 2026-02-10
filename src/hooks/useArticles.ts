@@ -46,11 +46,14 @@ export const usePublishedArticles = (categorySlug?: string, regionSlug?: string,
       const { data, error } = await query;
       if (error) throw error;
       
-      // Filter out articles where category didn't match (inner join simulation)
+      let filtered = data || [];
       if (categorySlug) {
-        return (data || []).filter((a: any) => a.categories !== null);
+        filtered = filtered.filter((a: any) => a.categories !== null);
       }
-      return data as Article[];
+      if (regionSlug) {
+        filtered = filtered.filter((a: any) => a.regions !== null);
+      }
+      return filtered as Article[];
     },
   });
 };

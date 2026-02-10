@@ -1,15 +1,23 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import NewsCard from "@/components/news/NewsCard";
 import Sidebar from "@/components/news/Sidebar";
-import { usePublishedArticles, useCategories } from "@/hooks/useArticles";
+import { usePublishedArticles, useCategories, useRegions } from "@/hooks/useArticles";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
   const { data: categories = [] } = useCategories();
-  const { data: articles = [], isLoading } = usePublishedArticles(slug, undefined, 20);
+  const { data: regions = [] } = useRegions();
+  const { data: articles = [], isLoading } = usePublishedArticles(
+    slug,
+    selectedRegion || undefined,
+    20
+  );
 
   const category = categories.find((cat) => cat.slug === slug);
 
@@ -38,9 +46,28 @@ const CategoryPage = () => {
           <span className="text-foreground">{category?.name || slug}</span>
         </nav>
 
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary">{category?.name || slug}</h1>
-          <p className="text-muted-foreground mt-2">Todas as notícias sobre {(category?.name || slug || "").toLowerCase()} em Santa Catarina</p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary">{category?.name || slug}</h1>
+            <p className="text-muted-foreground mt-2">
+              Todas as notícias sobre {(category?.name || slug || "").toLowerCase()} em Santa Catarina
+            </p>
+          </div>
+
+          {/* Filtro de Região */}
+          <div className="w-full sm:w-[220px]">
+            <Select value={selectedRegion} onValueChange={(v) => setSelectedRegion(v === "all" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as regiões" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as regiões</SelectItem>
+                {(regions as any[]).map((r) => (
+                  <SelectItem key={r.id} value={r.slug}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -58,7 +85,7 @@ const CategoryPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-16"><p className="text-muted-foreground">Nenhuma notícia encontrada nesta categoria.</p></div>
+              <div className="text-center py-16"><p className="text-muted-foreground">Nenhuma notícia encontrada{selectedRegion ? " nesta região" : " nesta categoria"}.</p></div>
             )}
           </div>
           <div className="lg:col-span-1"><Sidebar /></div>
