@@ -17,40 +17,27 @@ interface ExtractedArticle {
   published_date: string | null;
 }
 
-// Clean and extract pure text from markdown, removing navigation, ads, scripts, etc.
+// ─── Content Cleaning ────────────────────────────────────────────
 function cleanContent(markdown: string): string {
   let text = markdown;
-  // Remove markdown links but keep text: [text](url) -> text
   text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
-  // Remove images
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
-  // Remove HTML tags
   text = text.replace(/<[^>]+>/g, "");
-  // Remove navigation-like lines (very short lines with just links)
   text = text.replace(/^.{0,30}(menu|nav|footer|header|cookie|sidebar|widget|anunci|publicidade|propaganda|newsletter|inscreva|cadastr|compartilh|siga-nos|redes sociais|todos os direitos|copyright|©).{0,50}$/gim, "");
-  // Remove lines that are just URLs
   text = text.replace(/^https?:\/\/\S+$/gm, "");
-  // Remove excessive whitespace
   text = text.replace(/\n{3,}/g, "\n\n");
-  // Remove lines with common menu/nav patterns
   text = text.replace(/^(home|início|sobre|contato|fale conosco|política de privacidade|termos de uso|mapa do site)\s*$/gim, "");
   return text.trim();
 }
 
-// Extract the first meaningful image URL from markdown/links
 function extractImageUrl(markdown: string, links: string[]): string | null {
-  // Try to find image in markdown first
   const mdImages = markdown.match(/!\[[^\]]*\]\(([^)]+)\)/g);
   if (mdImages) {
     for (const img of mdImages) {
       const match = img.match(/!\[[^\]]*\]\(([^)]+)\)/);
-      if (match && match[1]) {
-        const url = match[1];
-        if (isValidImageUrl(url)) return url;
-      }
+      if (match?.[1] && isValidImageUrl(match[1])) return match[1];
     }
   }
-  // Try links
   for (const link of links) {
     if (isValidImageUrl(link)) return link;
   }
@@ -60,163 +47,295 @@ function extractImageUrl(markdown: string, links: string[]): string | null {
 function isValidImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
-  // Must be an image format
   if (!/\.(jpg|jpeg|png|webp|gif|avif)/i.test(lower) && !lower.includes("/image") && !lower.includes("img")) return false;
-  // Exclude common non-content images
   const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small"];
-  for (const ex of exclude) {
-    if (lower.includes(ex)) return false;
-  }
-  // Must be a reasonable size indicator or no size indicator
-  return true;
+  return !exclude.some((ex) => lower.includes(ex));
 }
 
-// Extract subtitle from the beginning of content
 function extractSubtitle(content: string, title: string): string {
   const lines = content.split("\n").filter((l) => l.trim().length > 20);
-  // First non-title line that's a good subtitle length
   for (const line of lines.slice(0, 3)) {
     const clean = line.replace(/^#+\s*/, "").trim();
-    if (clean !== title && clean.length > 20 && clean.length < 300) {
-      return clean;
-    }
+    if (clean !== title && clean.length > 20 && clean.length < 300) return clean;
   }
-  // Fallback: first 150 chars of content
-  const firstParagraph = content.split("\n\n")[0]?.trim() || "";
-  return firstParagraph.substring(0, 150);
+  return (content.split("\n\n")[0]?.trim() || "").substring(0, 150);
 }
 
-// Download image and upload to Supabase Storage
-async function downloadAndStoreImage(
-  imageUrl: string,
-  articleId: string,
-  supabase: any,
-  supabaseUrl: string
-): Promise<string | null> {
+// ─── Image Storage ───────────────────────────────────────────────
+async function downloadAndStoreImage(imageUrl: string, articleId: string, supabase: any, supabaseUrl: string): Promise<string | null> {
   try {
-    const response = await fetch(imageUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MelhorNewsSC/1.0)" },
-    });
+    const response = await fetch(imageUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; MelhorNewsSC/1.0)" } });
     if (!response.ok) return null;
-
     const contentType = response.headers.get("content-type") || "image/jpeg";
     if (!contentType.startsWith("image/")) return null;
-
     const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength < 1000) return null; // Too small, likely broken
-    if (arrayBuffer.byteLength > 5 * 1024 * 1024) return null; // Too large
-
+    if (arrayBuffer.byteLength < 1000 || arrayBuffer.byteLength > 5 * 1024 * 1024) return null;
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const filePath = `articles/${articleId}.${ext}`;
-
-    const { error } = await supabase.storage
-      .from("article-images")
-      .upload(filePath, arrayBuffer, {
-        contentType,
-        upsert: true,
-      });
-
-    if (error) {
-      console.error("Image upload error:", error);
-      return null;
-    }
-
+    const { error } = await supabase.storage.from("article-images").upload(filePath, arrayBuffer, { contentType, upsert: true });
+    if (error) { console.error("Image upload error:", error); return null; }
     return `${supabaseUrl}/storage/v1/object/public/article-images/${filePath}`;
-  } catch (err) {
-    console.error("Image download error:", err);
-    return null;
-  }
+  } catch (err) { console.error("Image download error:", err); return null; }
 }
 
-// Score article based on quality criteria
-function scoreArticle(
-  article: ExtractedArticle,
-  trustScore: number,
-  weights: Record<string, number>
-): { score: number; criteria: Record<string, any> } {
+// ─── Scoring ─────────────────────────────────────────────────────
+function scoreArticle(article: ExtractedArticle, trustScore: number, weights: Record<string, number>): { score: number; criteria: Record<string, any> } {
   const criteria: Record<string, any> = {};
-  let total = 0;
-  let maxPossible = 0;
+  let total = 0, maxPossible = 0;
 
-  // Trusted source (0-2)
-  const w1 = weights.trusted_source || 2;
-  maxPossible += w1;
-  if (trustScore >= 7) { total += w1; criteria.trusted_source = true; }
-  else { criteria.trusted_source = false; }
+  const w1 = weights.trusted_source || 2; maxPossible += w1;
+  if (trustScore >= 7) { total += w1; criteria.trusted_source = true; } else criteria.trusted_source = false;
 
-  // Complete content - word count (0-2)
-  const w2 = weights.complete_content || 2;
-  maxPossible += w2;
+  const w2 = weights.complete_content || 2; maxPossible += w2;
   const wordCount = article.content.split(/\s+/).length;
   if (wordCount > 150) { total += w2; criteria.complete_content = true; }
   else if (wordCount > 80) { total += w2 * 0.5; criteria.complete_content = "partial"; }
-  else { criteria.complete_content = false; }
+  else criteria.complete_content = false;
   criteria.word_count = wordCount;
 
-  // Has image (0-2)
-  const w3 = weights.has_image || 2;
-  maxPossible += w3;
-  if (article.image_url) { total += w3; criteria.has_image = true; }
-  else { criteria.has_image = false; }
+  const w3 = weights.has_image || 2; maxPossible += w3;
+  if (article.image_url) { total += w3; criteria.has_image = true; } else criteria.has_image = false;
 
-  // Has author (0-1)
-  const w4 = weights.has_author || 1;
-  maxPossible += w4;
-  if (article.author) { total += w4; criteria.has_author = true; }
-  else { criteria.has_author = false; }
+  const w4 = weights.has_author || 1; maxPossible += w4;
+  if (article.author) { total += w4; criteria.has_author = true; } else criteria.has_author = false;
 
-  // Has subtitle (0-1)
-  const w5 = weights.has_subtitle || 1;
-  maxPossible += w5;
-  if (article.subtitle && article.subtitle.length > 20) { total += w5; criteria.has_subtitle = true; }
-  else { criteria.has_subtitle = false; }
+  const w5 = weights.has_subtitle || 1; maxPossible += w5;
+  if (article.subtitle && article.subtitle.length > 20) { total += w5; criteria.has_subtitle = true; } else criteria.has_subtitle = false;
 
-  // Content quality - paragraphs (0-1)
-  const w6 = weights.content_quality || 1;
-  maxPossible += w6;
+  const w6 = weights.content_quality || 1; maxPossible += w6;
   const paragraphs = article.content.split("\n\n").filter((p) => p.trim().length > 30).length;
-  if (paragraphs >= 3) { total += w6; criteria.good_structure = true; }
-  else { criteria.good_structure = false; }
+  if (paragraphs >= 3) { total += w6; criteria.good_structure = true; } else criteria.good_structure = false;
   criteria.paragraph_count = paragraphs;
 
-  // Has date (0-1)
-  const w7 = weights.has_date || 1;
-  maxPossible += w7;
-  if (article.published_date) { total += w7; criteria.has_date = true; }
-  else { criteria.has_date = false; }
+  const w7 = weights.has_date || 1; maxPossible += w7;
+  if (article.published_date) { total += w7; criteria.has_date = true; } else criteria.has_date = false;
 
   const score = maxPossible > 0 ? (total / maxPossible) * 10 : 0;
   return { score: Math.round(score * 100) / 100, criteria };
 }
 
-// Classify by category keywords
+// ─── Classification ──────────────────────────────────────────────
 function classifyCategory(text: string, categories: Array<{ id: string; keywords: any }>): string | null {
   const lower = text.toLowerCase();
-  let bestMatch: string | null = null;
-  let bestCount = 0;
+  let bestMatch: string | null = null, bestCount = 0;
   for (const cat of categories) {
     const keywords = Array.isArray(cat.keywords) ? cat.keywords : [];
     let count = 0;
-    for (const kw of keywords) {
-      if (lower.includes(String(kw).toLowerCase())) count++;
-    }
+    for (const kw of keywords) { if (lower.includes(String(kw).toLowerCase())) count++; }
     if (count > bestCount) { bestCount = count; bestMatch = cat.id; }
   }
   return bestCount > 0 ? bestMatch : null;
 }
 
-// Classify by region keywords
 function classifyRegion(text: string, regions: Array<{ id: string; keywords: any }>): string | null {
   const lower = text.toLowerCase();
   for (const region of regions) {
     const keywords = Array.isArray(region.keywords) ? region.keywords : [];
-    for (const kw of keywords) {
-      if (lower.includes(String(kw).toLowerCase())) return region.id;
-    }
+    for (const kw of keywords) { if (lower.includes(String(kw).toLowerCase())) return region.id; }
   }
   return null;
 }
 
+// ─── Clean title ─────────────────────────────────────────────────
+function cleanTitle(title: string): string {
+  let t = title;
+  t = t.replace(/\s*[-|–—]\s*(Notícias|NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal|Correio|Gazeta|Tribuna|Rádio|TV|SC|Santa Catarina|Semanário).*$/i, "").trim();
+  t = t.replace(/\(https?:\/\/[^)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
+  return t;
+}
+
+// ─── RSS Feed Parser ─────────────────────────────────────────────
+async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<ExtractedArticle[]> {
+  try {
+    console.log(`[RSS] Fetching feed: ${feedUrl}`);
+    const res = await fetch(feedUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; MelhorNewsSC/1.0)" } });
+    if (!res.ok) { console.error(`[RSS] Failed to fetch ${feedUrl}: ${res.status}`); return []; }
+    const xml = await res.text();
+
+    const articles: ExtractedArticle[] = [];
+    // Parse <item> blocks from RSS
+    const items = xml.split(/<item>/i).slice(1);
+    for (const item of items.slice(0, 15)) {
+      const getTag = (tag: string) => {
+        const m = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([^\\]]*?)\\]\\]></${tag}>`, "is"))
+          || item.match(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "is"));
+        return m?.[1]?.trim() || "";
+      };
+
+      const title = cleanTitle(getTag("title").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"'));
+      const link = getTag("link") || getTag("guid");
+      let description = getTag("description").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+      const contentEncoded = (item.match(/<content:encoded>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content:encoded>/i)?.[1] || "");
+      const pubDate = getTag("pubDate") || getTag("dc:date");
+      const author = getTag("dc:creator") || getTag("author");
+
+      // Extract image from enclosure, media:content, or content
+      let imageUrl: string | null = null;
+      const enclosure = item.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
+      if (enclosure?.[1]) imageUrl = enclosure[1];
+      if (!imageUrl) {
+        const media = item.match(/<media:content[^>]+url=["']([^"']+)["']/i);
+        if (media?.[1]) imageUrl = media[1];
+      }
+      if (!imageUrl) {
+        const imgInContent = (contentEncoded || description).match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (imgInContent?.[1]) imageUrl = imgInContent[1];
+      }
+
+      // Use content:encoded if available, else description
+      let body = contentEncoded || description;
+      // Strip HTML tags for clean text
+      body = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+      if (!title || title.length < 10 || !link) continue;
+
+      articles.push({
+        title,
+        subtitle: description.replace(/<[^>]+>/g, "").substring(0, 200).trim(),
+        content: body,
+        image_url: imageUrl,
+        source_url: link,
+        source_name: sourceName,
+        author: author || null,
+        published_date: pubDate || null,
+      });
+    }
+    console.log(`[RSS] Parsed ${articles.length} articles from ${sourceName}`);
+    return articles;
+  } catch (err) { console.error(`[RSS] Error fetching ${feedUrl}:`, err); return []; }
+}
+
+// ─── NewsAPI Fetcher ─────────────────────────────────────────────
+async function fetchNewsAPI(apiKey: string): Promise<ExtractedArticle[]> {
+  try {
+    console.log("[NewsAPI] Fetching Santa Catarina news...");
+    const query = encodeURIComponent("Santa Catarina OR Florianópolis OR Tubarão OR Criciúma OR Laguna OR Jaguaruna");
+    const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&sortBy=publishedAt&pageSize=20&apiKey=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) { console.error(`[NewsAPI] Failed: ${res.status}`); return []; }
+    const data = await res.json();
+    const articles: ExtractedArticle[] = [];
+    for (const a of (data.articles || [])) {
+      if (!a.title || a.title === "[Removed]" || a.title.length < 10) continue;
+      articles.push({
+        title: cleanTitle(a.title),
+        subtitle: a.description || "",
+        content: a.content || a.description || "",
+        image_url: a.urlToImage || null,
+        source_url: a.url,
+        source_name: a.source?.name || "NewsAPI",
+        author: a.author || null,
+        published_date: a.publishedAt || null,
+      });
+    }
+    console.log(`[NewsAPI] Found ${articles.length} articles`);
+    return articles;
+  } catch (err) { console.error("[NewsAPI] Error:", err); return []; }
+}
+
+// ─── APITube Fetcher ─────────────────────────────────────────────
+async function fetchAPITube(apiKey: string): Promise<ExtractedArticle[]> {
+  try {
+    console.log("[APITube] Fetching SC news...");
+    const url = `https://api.apitube.io/v1/news/everything?search.title="Santa Catarina"&search.language=pt&limit=20&api_key=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) { console.error(`[APITube] Failed: ${res.status}`); return []; }
+    const data = await res.json();
+    const articles: ExtractedArticle[] = [];
+    for (const a of (data.results || data.articles || data.data || [])) {
+      const title = a.title || a.headline || "";
+      if (!title || title.length < 10) continue;
+      articles.push({
+        title: cleanTitle(title),
+        subtitle: a.description || a.summary || "",
+        content: a.body || a.content || a.description || "",
+        image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
+        source_url: a.url || a.link || "",
+        source_name: a.source?.name || a.source || "APITube",
+        author: a.author || null,
+        published_date: a.publishedAt || a.date || null,
+      });
+    }
+    console.log(`[APITube] Found ${articles.length} articles`);
+    return articles;
+  } catch (err) { console.error("[APITube] Error:", err); return []; }
+}
+
+// ─── Process and Save Article ────────────────────────────────────
+async function processAndSave(
+  article: ExtractedArticle,
+  supabase: any,
+  supabaseUrl: string,
+  categories: any[],
+  regions: any[],
+  weights: Record<string, number>,
+  autoPublish: any,
+  trustScore: number
+): Promise<boolean> {
+  try {
+    if (!article.title || article.title.length < 10) return false;
+    if (article.content.length < 80) return false;
+
+    // Check duplicates by source_url or title
+    if (article.source_url) {
+      const { data: byUrl } = await supabase.from("articles").select("id").eq("source_url", article.source_url).limit(1);
+      if (byUrl?.length) return false;
+    }
+    const { data: byTitle } = await supabase.from("articles").select("id").eq("title", article.title).limit(1);
+    if (byTitle?.length) return false;
+
+    const articleId = crypto.randomUUID();
+
+    // Download and store image locally
+    let storedImageUrl: string | null = null;
+    if (article.image_url) {
+      storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
+    }
+
+    const finalArticle = { ...article, image_url: storedImageUrl };
+    const { score, criteria } = scoreArticle(finalArticle, trustScore, weights);
+
+    const fullText = `${article.title} ${article.subtitle} ${article.content}`;
+    const categoryId = classifyCategory(fullText, categories);
+    const regionId = classifyRegion(fullText, regions);
+
+    let status = "recycled";
+    let publishedAt: string | null = null;
+    if (autoPublish.enabled && score >= autoPublish.min_score) {
+      status = "published";
+      publishedAt = new Date().toISOString();
+    }
+
+    // Remove title/subtitle from body
+    let bodyContent = article.content;
+    if (bodyContent.startsWith(article.title)) bodyContent = bodyContent.substring(article.title.length).trim();
+    if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
+
+    const { error } = await supabase.from("articles").insert({
+      id: articleId,
+      title: article.title,
+      excerpt: article.subtitle,
+      content: bodyContent,
+      image_url: storedImageUrl,
+      source_url: article.source_url,
+      source_name: article.source_name,
+      author: article.author,
+      category_id: categoryId,
+      region_id: regionId,
+      score,
+      score_criteria: criteria,
+      status,
+      published_at: publishedAt,
+      scraped_at: new Date().toISOString(),
+    });
+
+    if (error) { console.error(`Insert error for "${article.title}":`, error); return false; }
+    console.log(`✓ Saved: "${article.title}" (score: ${score}, status: ${status}, source: ${article.source_name})`);
+    return true;
+  } catch (err) { console.error(`Error processing "${article.title}":`, err); return false; }
+}
+
+// ─── Main Handler ────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -226,234 +345,143 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
-
-    if (!firecrawlKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "FIRECRAWL_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const newsApiKey = Deno.env.get("NEWS_API_KEY");
+    const apiTubeKey = Deno.env.get("APITUBE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch active sources
-    const { data: sources } = await supabase.from("news_sources").select("*").eq("active", true);
-    if (!sources || sources.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, articlesProcessed: 0, message: "No active sources" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch categories, regions, and settings
-    const [catRes, regRes, settingsRes] = await Promise.all([
+    // Fetch categories, regions, settings, and sources
+    const [catRes, regRes, settingsRes, sourcesRes] = await Promise.all([
       supabase.from("categories").select("id, keywords"),
       supabase.from("regions").select("id, keywords"),
       supabase.from("system_settings").select("key, value"),
+      supabase.from("news_sources").select("*").eq("active", true),
     ]);
 
     const categories = catRes.data || [];
     const regions = regRes.data || [];
     const settingsMap: Record<string, any> = {};
-    for (const s of settingsRes.data || []) { settingsMap[s.key] = s.value; }
-
+    for (const s of settingsRes.data || []) settingsMap[s.key] = s.value;
     const autoPublish = settingsMap.auto_publish || { enabled: false, min_score: 7.5 };
     const weights = settingsMap.scoring_weights || {};
+    const sources = sourcesRes.data || [];
 
     let articlesProcessed = 0;
+    const allArticles: { article: ExtractedArticle; trustScore: number }[] = [];
 
-    for (const source of sources) {
-      try {
-        console.log(`[Step 1] Mapping source: ${source.name} (${source.url})`);
+    // ─── Source 1: RSS Feeds (Semanário SC + any source with rss_url) ────
+    const rssFeeds = [
+      { url: "https://semanario-sc.com.br/feed", name: "Semanário SC" },
+      { url: "https://semanario-sc.com.br/feed/7/economia/", name: "Semanário SC" },
+      { url: "https://semanario-sc.com.br/feed/11/tecnologia/", name: "Semanário SC" },
+    ];
+    // Add RSS feeds from news_sources table
+    for (const s of sources) {
+      if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name });
+    }
 
-        // Step 1: Map the source to get article URLs
-        const mapResponse = await fetch("https://api.firecrawl.dev/v1/map", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url: source.url,
-            limit: 20,
-            includeSubdomains: false,
-          }),
-        });
+    const rssPromises = rssFeeds.map((feed) => fetchRSSArticles(feed.url, feed.name));
+    const rssResults = await Promise.all(rssPromises);
+    for (const articles of rssResults) {
+      for (const a of articles) allArticles.push({ article: a, trustScore: 7 });
+    }
 
-        const mapData = await mapResponse.json();
-        if (!mapResponse.ok || !mapData.success) {
-          console.error(`Failed to map ${source.name}:`, mapData);
-          continue;
-        }
+    // ─── Source 2: NewsAPI ───────────────────────────────────────────
+    if (newsApiKey) {
+      const newsApiArticles = await fetchNewsAPI(newsApiKey);
+      for (const a of newsApiArticles) allArticles.push({ article: a, trustScore: 6 });
+    }
 
-        const articleUrls = (mapData.links || []).filter((url: string) => {
-          const lower = url.toLowerCase();
-          // Filter for article-like URLs (contain /noticia, /news, date patterns, etc.)
-          return (
-            url.length > 50 &&
-            !lower.endsWith(".pdf") &&
-            !lower.endsWith(".xml") &&
-            !lower.includes("/tag/") &&
-            !lower.includes("/categoria/") &&
-            !lower.includes("/author/") &&
-            !lower.includes("/page/") &&
-            !lower.includes("/login") &&
-            !lower.includes("/cadastro") &&
-            !lower.includes("/busca") &&
-            !lower.includes("/feed") &&
-            (lower.includes("/noticia") ||
-              lower.includes("/noticias") ||
-              lower.includes("/colunista") ||
-              lower.includes("/materia") ||
-              lower.includes("/news") ||
-              /\/\d{4}\/\d{2}\//.test(lower) ||
-              lower.split("/").length >= 4)
-          );
-        }).slice(0, 10); // Limit to 10 articles per source
+    // ─── Source 3: APITube ───────────────────────────────────────────
+    if (apiTubeKey) {
+      const apiTubeArticles = await fetchAPITube(apiTubeKey);
+      for (const a of apiTubeArticles) allArticles.push({ article: a, trustScore: 6 });
+    }
 
-        console.log(`[Step 2] Found ${articleUrls.length} article URLs from ${source.name}`);
+    // ─── Source 4: Firecrawl deep scraping (existing sources) ────────
+    if (firecrawlKey && sources.length > 0) {
+      for (const source of sources) {
+        try {
+          console.log(`[Firecrawl] Mapping: ${source.name} (${source.url})`);
+          const mapResponse = await fetch("https://api.firecrawl.dev/v1/map", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ url: source.url, limit: 15, includeSubdomains: false }),
+          });
+          const mapData = await mapResponse.json();
+          if (!mapResponse.ok || !mapData.success) { console.error(`Map failed for ${source.name}`); continue; }
 
-        // Step 2: Deep-scrape each individual article
-        for (const articleUrl of articleUrls) {
-          try {
-            // Check for duplicate by source_url
-            const { data: existing } = await supabase
-              .from("articles")
-              .select("id")
-              .eq("source_url", articleUrl)
-              .limit(1);
-            if (existing && existing.length > 0) continue;
+          const articleUrls = (mapData.links || []).filter((url: string) => {
+            const lower = url.toLowerCase();
+            return url.length > 50 && !lower.endsWith(".pdf") && !lower.endsWith(".xml") &&
+              !lower.includes("/tag/") && !lower.includes("/categoria/") && !lower.includes("/author/") &&
+              !lower.includes("/page/") && !lower.includes("/login") && !lower.includes("/busca") && !lower.includes("/feed") &&
+              (lower.includes("/noticia") || lower.includes("/noticias") || lower.includes("/materia") || lower.includes("/news") || /\/\d{4}\/\d{2}\//.test(lower) || lower.split("/").length >= 4);
+          }).slice(0, 8);
 
-            console.log(`[Step 3] Scraping article: ${articleUrl}`);
+          console.log(`[Firecrawl] Found ${articleUrls.length} URLs from ${source.name}`);
 
-            const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                url: articleUrl,
-                formats: ["markdown", "links"],
-                onlyMainContent: true,
-              }),
-            });
+          for (const articleUrl of articleUrls) {
+            try {
+              // Quick duplicate check
+              const { data: existing } = await supabase.from("articles").select("id").eq("source_url", articleUrl).limit(1);
+              if (existing?.length) continue;
 
-            const scrapeData = await scrapeResponse.json();
-            if (!scrapeResponse.ok || !scrapeData.success) {
-              console.error(`Failed to scrape ${articleUrl}:`, scrapeData);
-              continue;
-            }
+              const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ url: articleUrl, formats: ["markdown", "links"], onlyMainContent: true }),
+              });
+              const scrapeData = await scrapeRes.json();
+              if (!scrapeRes.ok || !scrapeData.success) continue;
 
-            const rawMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-            const metadata = scrapeData.data?.metadata || scrapeData.metadata || {};
-            const links = scrapeData.data?.links || scrapeData.links || [];
+              const rawMd = scrapeData.data?.markdown || "";
+              const metadata = scrapeData.data?.metadata || {};
+              const links = scrapeData.data?.links || [];
+              const cleaned = cleanContent(rawMd);
+              if (cleaned.length < 100) continue;
 
-            // Clean the content
-            const cleanedContent = cleanContent(rawMarkdown);
-            if (cleanedContent.length < 100) {
-              console.log(`Skipping ${articleUrl}: content too short (${cleanedContent.length} chars)`);
-              continue;
-            }
+              let title = cleanTitle(metadata.title || "");
+              if (!title || title.length < 10) {
+                title = cleaned.split("\n")[0]?.replace(/^#+\s*/, "").trim() || "";
+              }
+              if (!title || title.length < 10 || title.length > 300) continue;
 
-            // Extract title from metadata or first heading
-            let title = metadata.title || "";
-            // Clean title: remove site name suffixes like "- Notícias de Tubarão", "| Portal SC"
-            title = title.replace(/\s*[-|–—]\s*(Notícias|NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal|Correio|Gazeta|Tribuna|Rádio|TV|SC|Santa Catarina).*$/i, "").trim();
-            title = title.replace(/\(https?:\/\/[^)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
-            if (!title || title.length < 10) {
-              const firstLine = cleanedContent.split("\n")[0]?.replace(/^#+\s*/, "").trim();
-              title = firstLine || "";
-            }
-            if (!title || title.length < 10 || title.length > 300) continue;
+              const subtitle = extractSubtitle(cleaned, title);
+              const imageUrl = extractImageUrl(rawMd, links);
 
-            // Check duplicate by title
-            const { data: existingTitle } = await supabase
-              .from("articles")
-              .select("id")
-              .eq("title", title)
-              .limit(1);
-            if (existingTitle && existingTitle.length > 0) continue;
+              let body = cleaned;
+              if (body.startsWith(title)) body = body.substring(title.length).trim();
+              if (subtitle && body.startsWith(subtitle)) body = body.substring(subtitle.length).trim();
 
-            // Extract article parts
-            const subtitle = extractSubtitle(cleanedContent, title);
-            const originalImageUrl = extractImageUrl(rawMarkdown, links);
-
-            // Remove title from content body
-            let bodyContent = cleanedContent;
-            if (bodyContent.startsWith(title)) {
-              bodyContent = bodyContent.substring(title.length).trim();
-            }
-            // Remove subtitle from body if it appears at the start
-            if (subtitle && bodyContent.startsWith(subtitle)) {
-              bodyContent = bodyContent.substring(subtitle.length).trim();
-            }
-
-            // Generate article ID first for image storage
-            const articleId = crypto.randomUUID();
-
-            // Download and store image
-            let storedImageUrl: string | null = null;
-            if (originalImageUrl) {
-              storedImageUrl = await downloadAndStoreImage(originalImageUrl, articleId, supabase, supabaseUrl);
-            }
-
-            const extractedArticle: ExtractedArticle = {
-              title,
-              subtitle,
-              content: bodyContent,
-              image_url: storedImageUrl,
-              source_url: articleUrl,
-              source_name: source.name,
-              author: metadata.author || null,
-              published_date: metadata.publishedTime || metadata.date || null,
-            };
-
-            // Score
-            const { score, criteria } = scoreArticle(extractedArticle, source.trust_score, weights);
-
-            // Classify
-            const fullText = `${title} ${subtitle} ${bodyContent}`;
-            const categoryId = classifyCategory(fullText, categories);
-            const regionId = classifyRegion(fullText, regions);
-
-            // Determine status
-            let status: string = "recycled";
-            let publishedAt: string | null = null;
-            if (autoPublish.enabled && score >= autoPublish.min_score) {
-              status = "published";
-              publishedAt = new Date().toISOString();
-            }
-
-            const { error: insertError } = await supabase.from("articles").insert({
-              id: articleId,
-              title,
-              excerpt: subtitle,
-              content: bodyContent,
-              image_url: storedImageUrl,
-              source_url: articleUrl,
-              source_name: source.name,
-              author: extractedArticle.author,
-              category_id: categoryId,
-              region_id: regionId,
-              score,
-              score_criteria: criteria,
-              status,
-              published_at: publishedAt,
-              scraped_at: new Date().toISOString(),
-            });
-
-            if (insertError) {
-              console.error(`Insert error for "${title}":`, insertError);
-            } else {
-              articlesProcessed++;
-              console.log(`✓ Article saved: "${title}" (score: ${score}, status: ${status})`);
-            }
-          } catch (articleError) {
-            console.error(`Error processing article ${articleUrl}:`, articleError);
+              allArticles.push({
+                article: {
+                  title, subtitle, content: body,
+                  image_url: imageUrl, source_url: articleUrl,
+                  source_name: source.name,
+                  author: metadata.author || null,
+                  published_date: metadata.publishedTime || metadata.date || null,
+                },
+                trustScore: source.trust_score || 5,
+              });
+            } catch (e) { console.error(`Error scraping ${articleUrl}:`, e); }
           }
-        }
-      } catch (sourceError) {
-        console.error(`Error processing source ${source.name}:`, sourceError);
+        } catch (e) { console.error(`Error with source ${source.name}:`, e); }
       }
     }
 
+    // ─── Save all collected articles ─────────────────────────────────
+    console.log(`[Total] ${allArticles.length} articles collected from all sources. Saving...`);
+
+    for (const { article, trustScore } of allArticles) {
+      const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, weights, autoPublish, trustScore);
+      if (saved) articlesProcessed++;
+    }
+
+    console.log(`[Done] ${articlesProcessed} new articles saved.`);
+
     return new Response(
-      JSON.stringify({ success: true, articlesProcessed }),
+      JSON.stringify({ success: true, articlesProcessed, totalCollected: allArticles.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
