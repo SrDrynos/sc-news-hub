@@ -23,23 +23,25 @@ const ArticleMeta = ({ publishedAt, readingTime, categoryName, categorySlug }: A
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground border-b border-border pb-5 mb-6">
-      <span className="flex items-center gap-1.5 font-medium text-foreground">
-        <User className="h-4 w-4" />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground border-y border-border py-4 mb-6">
+      <span className="flex items-center gap-1.5 font-semibold text-foreground">
+        <User className="h-4 w-4 text-secondary" />
         Redação Melhor News
       </span>
+      <span className="text-border">•</span>
       {publishedAt && (
         <>
           <span className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-3.5 w-3.5" />
             {formatDate(publishedAt)}
           </span>
-          <span className="text-muted-foreground/50">|</span>
+          <span className="text-border">•</span>
           <span>{formatTime(publishedAt)}</span>
+          <span className="text-border">•</span>
         </>
       )}
       <span className="flex items-center gap-1.5">
-        <Clock className="h-4 w-4" />
+        <Clock className="h-3.5 w-3.5" />
         {readingTime} min de leitura
       </span>
     </div>
