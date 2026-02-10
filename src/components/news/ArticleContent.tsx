@@ -153,10 +153,17 @@ const ArticleContent = ({ content }: ArticleContentProps) => {
     <div className="article-body prose prose-lg max-w-none">
       {paragraphs.map((paragraph, index) => (
         <div key={index}>
-          <p className="text-foreground leading-relaxed mb-6 text-lg">{paragraph}</p>
-          {index === 2 && paragraphs.length > 5 && (
-            <div className="my-8 not-prose">
-              <div className="ad-banner h-[250px]"><span>Anúncio 300x250</span></div>
+          <p className="text-foreground leading-[1.85] mb-6 text-lg font-serif">{paragraph}</p>
+          {/* AdSense: após 3º parágrafo — posição nativa no conteúdo */}
+          {index === 2 && paragraphs.length > 4 && (
+            <div className="my-8 not-prose flex justify-center">
+              <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
+            </div>
+          )}
+          {/* AdSense: após 7º parágrafo em artigos longos */}
+          {index === 6 && paragraphs.length > 8 && (
+            <div className="my-8 not-prose flex justify-center">
+              <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
             </div>
           )}
         </div>
