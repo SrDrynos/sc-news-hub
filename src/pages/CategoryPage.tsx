@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import NewsCard from "@/components/news/NewsCard";
@@ -10,9 +10,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedRegion, setSelectedRegion] = useState<string>(searchParams.get("regiao") || "");
   const { data: categories = [] } = useCategories();
   const { data: regions = [] } = useRegions();
+
+  useEffect(() => {
+    const regiao = searchParams.get("regiao");
+    if (regiao) setSelectedRegion(regiao);
+  }, [searchParams]);
+
+  const handleRegionChange = (v: string) => {
+    const value = v === "all" ? "" : v;
+    setSelectedRegion(value);
+    if (value) {
+      setSearchParams({ regiao: value });
+    } else {
+      setSearchParams({});
+    }
+  };
+
   const { data: articles = [], isLoading } = usePublishedArticles(
     slug,
     selectedRegion || undefined,
@@ -56,7 +73,7 @@ const CategoryPage = () => {
 
           {/* Filtro de Região */}
           <div className="w-full sm:w-[220px]">
-            <Select value={selectedRegion} onValueChange={(v) => setSelectedRegion(v === "all" ? "" : v)}>
+            <Select value={selectedRegion} onValueChange={handleRegionChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas as regiões" />
               </SelectTrigger>

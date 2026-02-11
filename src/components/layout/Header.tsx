@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield } from "lucide-react";
+import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCategories } from "@/hooks/useArticles";
+import { useCategories, useRegions } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const { isStaff } = useAuth();
   const { data: categories = [] } = useCategories();
+  const { data: regions = [] } = useRegions();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -63,11 +64,34 @@ const Header = () => {
         <div className="container">
           <div className="hidden lg:flex items-center justify-between">
             <ul className="flex items-center">
-              {mainNavItems.map((item) => (
-                <li key={item.path}>
-                  <Link to={item.path} className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors">{item.name}</Link>
-                </li>
-              ))}
+              {mainNavItems.map((item) => {
+                const isCidades = item.name.toLowerCase() === "cidades";
+                if (isCidades && (regions as any[]).length > 0) {
+                  return (
+                    <li key={item.path} className="relative group">
+                      <Link to={item.path} className="flex items-center gap-1 px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors">
+                        {item.name}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Link>
+                      <ul className="absolute left-0 top-full min-w-[200px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                        <li>
+                          <Link to={item.path} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors font-medium">Todas as Cidades</Link>
+                        </li>
+                        {(regions as any[]).map((r) => (
+                          <li key={r.id}>
+                            <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">{r.name}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                }
+                return (
+                  <li key={item.path}>
+                    <Link to={item.path} className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors">{item.name}</Link>
+                  </li>
+                );
+              })}
             </ul>
             <div className="flex items-center gap-1">
               {isStaff && (
@@ -82,11 +106,28 @@ const Header = () => {
           {isMenuOpen && (
             <div className="lg:hidden py-4 animate-slide-in-up">
               <ul className="space-y-1">
-                {mainNavItems.map((item) => (
-                  <li key={item.path}>
-                    <Link to={item.path} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMenuOpen(false)}>{item.name}</Link>
-                  </li>
-                ))}
+                {mainNavItems.map((item) => {
+                  const isCidades = item.name.toLowerCase() === "cidades";
+                  if (isCidades && (regions as any[]).length > 0) {
+                    return (
+                      <li key={item.path}>
+                        <Link to={item.path} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>{item.name}</Link>
+                        <ul className="ml-4 space-y-1">
+                          {(regions as any[]).map((r) => (
+                            <li key={r.id}>
+                              <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>{r.name}</Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={item.path}>
+                      <Link to={item.path} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMenuOpen(false)}>{item.name}</Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
