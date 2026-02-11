@@ -1,10 +1,11 @@
 import { useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { Key, PlugZap, Unplug } from "lucide-react";
 
 const SettingsPage = () => {
   const { data: settings, isLoading } = useSystemSettings();
@@ -26,6 +27,17 @@ const SettingsPage = () => {
     toast({ title: "Nota mínima atualizada!" });
   };
 
+  const apiKeys = settings?.api_keys as Record<string, { label: string; enabled: boolean }> | undefined;
+
+  const handleToggleApi = async (apiId: string, enabled: boolean) => {
+    const updated = { ...apiKeys, [apiId]: { ...apiKeys?.[apiId], enabled } };
+    await updateSetting.mutateAsync({ key: "api_keys", value: updated });
+    toast({
+      title: enabled ? "API ativada" : "API desativada",
+      description: `${apiKeys?.[apiId]?.label || apiId} foi ${enabled ? "ativada" : "desativada"}.`,
+    });
+  };
+
   if (isLoading) return <p>Carregando...</p>;
 
   return (
@@ -33,6 +45,47 @@ const SettingsPage = () => {
       <h1 className="text-3xl font-heading font-bold mb-6">Configurações</h1>
 
       <div className="space-y-6">
+        {/* Gerenciamento de APIs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Gerenciamento de APIs
+            </CardTitle>
+            <CardDescription>Ative ou desative as fontes de dados utilizadas pelo sistema de agregação de notícias.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {apiKeys ? (
+              <div className="space-y-4">
+                {Object.entries(apiKeys).map(([id, api]) => (
+                  <div key={id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                    <div className="flex items-center gap-3">
+                      {api.enabled ? (
+                        <PlugZap className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Unplug className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      <div>
+                        <p className="font-medium">{api.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {api.enabled ? "Ativa — buscando notícias" : "Desativada — não será utilizada nas buscas"}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={api.enabled}
+                      onCheckedChange={(checked) => handleToggleApi(id, checked)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma API configurada.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Publicação Automática */}
         <Card>
           <CardHeader>
             <CardTitle>Publicação Automática</CardTitle>
@@ -71,6 +124,7 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
+        {/* Pesos de Pontuação */}
         <Card>
           <CardHeader>
             <CardTitle>Pesos de Pontuação</CardTitle>
