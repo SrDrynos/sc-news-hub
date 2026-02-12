@@ -32,6 +32,7 @@ export function auditArticle(article: {
   source_url?: string;
   source_name?: string;
   category_id?: string;
+  region_id?: string;
 }): AuditResult {
   const errors: AuditError[] = [];
 
@@ -98,9 +99,14 @@ export function auditArticle(article: {
     }
   }
 
-  // REGRA 6 – Categoria obrigatória
+  // REGRA 6 – Cidade (região) obrigatória — deve vir antes da categoria
+  if (!article.region_id) {
+    errors.push({ rule: 6, message: "Cidade é obrigatória. Selecione a cidade de origem da notícia antes de publicar." });
+  }
+
+  // REGRA 7 – Categoria obrigatória (após cidade)
   if (!article.category_id) {
-    errors.push({ rule: 3, message: "Categoria é obrigatória." });
+    errors.push({ rule: 7, message: "Categoria é obrigatória. Vincule após definir a cidade." });
   }
 
   return {

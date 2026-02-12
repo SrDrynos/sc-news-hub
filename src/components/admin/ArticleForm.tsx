@@ -156,20 +156,20 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
       {/* Categoria e Região */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label>Categoria *</Label>
-          <Select value={data.category_id || ""} onValueChange={(v) => onChange({ ...data, category_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+          <Label>Cidade (origem da notícia) * <span className="text-destructive text-xs">obrigatório</span></Label>
+          <Select value={data.region_id || ""} onValueChange={(v) => onChange({ ...data, region_id: v })}>
+            <SelectTrigger className={!data.region_id ? "border-destructive" : ""}><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
             <SelectContent>
-              {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label>Região</Label>
-          <Select value={data.region_id || ""} onValueChange={(v) => onChange({ ...data, region_id: v })}>
+          <Label>Categoria * <span className="text-muted-foreground text-xs">(após cidade)</span></Label>
+          <Select value={data.category_id || ""} onValueChange={(v) => onChange({ ...data, category_id: v })}>
             <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
             <SelectContent>
-              {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+              {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
