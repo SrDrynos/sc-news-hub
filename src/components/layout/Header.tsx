@@ -45,7 +45,6 @@ const Header = () => {
           <Link to="/" className="flex items-center gap-2">
             <div className="flex flex-col">
               <span className="text-2xl md:text-3xl font-heading font-bold text-primary">Melhor News</span>
-              <span className="text-lg md:text-xl font-heading font-bold text-secondary">SC</span>
             </div>
           </Link>
           <p className="hidden lg:block text-sm text-muted-foreground italic">O portal de notícias de Santa Catarina</p>
