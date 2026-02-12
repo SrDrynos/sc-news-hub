@@ -276,6 +276,12 @@ async function processAndSave(
     if (!article.title || article.title.length < 10) return false;
     if (article.content.length < 80) return false;
 
+    // Reject articles with JSON garbage in source_name
+    if (article.source_name && (article.source_name.includes("{") || article.source_name.includes("Upgrade subscription"))) {
+      console.warn(`Rejected "${article.title}" - invalid source_name`);
+      return false;
+    }
+
     // Check duplicates by source_url or title
     if (article.source_url) {
       const { data: byUrl } = await supabase.from("articles").select("id").eq("source_url", article.source_url).limit(1);
