@@ -126,10 +126,10 @@ const ArticlePage = () => {
               {article.title}
             </h1>
 
-            {/* 4. Subtítulo (linha fina) */}
+            {/* 4. Subtítulo (linha fina) — breve, máx. 2 linhas */}
             {article.excerpt && (
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-5 border-l-4 border-secondary pl-4">
-                {article.excerpt}
+                {article.excerpt.length > 180 ? article.excerpt.substring(0, 180).replace(/\s\S*$/, '') + '…' : article.excerpt}
               </p>
             )}
 
