@@ -17,6 +17,20 @@ interface ExtractedArticle {
   published_date: string | null;
 }
 
+// All 50 target cities for search queries
+const TARGET_CITIES = [
+  "Sangão", "Morro da Fumaça", "Treze de Maio", "Jaguaruna", "Criciúma",
+  "Forquilhinha", "Içara", "Nova Veneza", "Araranguá", "Meleiro",
+  "Cocal do Sul", "Siderópolis", "Lauro Müller", "Orleans", "Tubarão",
+  "Capivari de Baixo", "Imbituba", "Garopaba", "Paulo Lopes", "Palhoça",
+  "Florianópolis", "Governador Celso Ramos", "Itapema", "Balneário Piçarras",
+  "Itajaí", "Navegantes", "Camboriú", "Balneário Camboriú", "Sombrio",
+  "Balneário Arroio do Silva", "Maracajá", "Nova Trento", "Braço do Norte",
+  "São Ludgero", "Grão-Pará", "Santa Rosa de Lima", "Treviso",
+  "Jacinto Machado", "Timbé do Sul", "Pedras Grandes", "Angelina",
+  "Armazém", "Imaruí", "Morro Grande", "Laguna"
+];
+
 // ─── Content Cleaning ────────────────────────────────────────────
 function cleanContent(markdown: string): string {
   let text = markdown;
@@ -136,12 +150,96 @@ function classifyRegion(text: string, regions: Array<{ id: string; keywords: any
   return null;
 }
 
+// ─── Check if article is about a target city ─────────────────────
+function isAboutTargetCity(text: string): boolean {
+  const lower = text.toLowerCase();
+  return TARGET_CITIES.some(city => lower.includes(city.toLowerCase()));
+}
+
 // ─── Clean title ─────────────────────────────────────────────────
 function cleanTitle(title: string): string {
   let t = title;
   t = t.replace(/\s*[-|–—]\s*(Notícias|NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal|Correio|Gazeta|Tribuna|Rádio|TV|SC|Santa Catarina|Semanário).*$/i, "").trim();
   t = t.replace(/\(https?:\/\/[^)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
   return t;
+}
+
+// ─── AI Content Rewriter ─────────────────────────────────────────
+async function rewriteWithAI(article: ExtractedArticle): Promise<{ content: string; excerpt: string; meta_description: string } | null> {
+  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableApiKey) {
+    console.warn("[AI] LOVABLE_API_KEY not configured, skipping rewrite");
+    return null;
+  }
+
+  try {
+    const prompt = `Você é um jornalista profissional do portal "Melhor News SC". Reescreva a notícia abaixo em um artigo completo, original, em português brasileiro, com linguagem jornalística rigorosa.
+
+REGRAS OBRIGATÓRIAS:
+1. O artigo deve ter entre 1000 e 1200 palavras
+2. Use HTML pronto para WordPress com tags <h2>, <h3>, <p>
+3. Estrutura: Introdução (2-3 parágrafos) → Desenvolvimento com subtítulos (<h2>) → Conclusão
+4. Linguagem formal, clara, sem erros de ortografia ou concordância
+5. NÃO inclua links externos no corpo do texto
+6. NÃO invente informações que não estão na fonte original
+7. NÃO repita o título no corpo do texto
+8. Crédito editorial: "Redação Melhor News"
+9. Foco estritamente na notícia; não inclua especulações
+
+TÍTULO: ${article.title}
+SUBTÍTULO: ${article.subtitle}
+CONTEÚDO ORIGINAL:
+${article.content.substring(0, 3000)}
+
+Responda APENAS com um JSON válido no formato:
+{
+  "content": "<p>Introdução...</p><h2>Subtítulo 1</h2><p>Desenvolvimento...</p>...<p>Conclusão...</p>",
+  "excerpt": "Resumo explicativo da notícia em até 200 caracteres",
+  "meta_description": "Meta description SEO de 150-160 caracteres"
+}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "Você é um jornalista profissional que reescreve notícias para o portal Melhor News SC. Responda APENAS com JSON válido, sem markdown code blocks." },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[AI] Gateway error ${response.status}: ${errText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || "";
+    
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonStr = rawContent.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+    }
+
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed.content || parsed.content.length < 500) {
+      console.warn(`[AI] Rewrite too short for "${article.title}"`);
+      return null;
+    }
+
+    console.log(`[AI] ✓ Rewritten "${article.title}" (${parsed.content.split(/\s+/).length} words)`);
+    return parsed;
+  } catch (err) {
+    console.error(`[AI] Error rewriting "${article.title}":`, err);
+    return null;
+  }
 }
 
 // ─── RSS Feed Parser ─────────────────────────────────────────────
@@ -153,7 +251,6 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
     const xml = await res.text();
 
     const articles: ExtractedArticle[] = [];
-    // Parse <item> blocks from RSS
     const items = xml.split(/<item>/i).slice(1);
     for (const item of items.slice(0, 15)) {
       const getTag = (tag: string) => {
@@ -169,7 +266,6 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
       const pubDate = getTag("pubDate") || getTag("dc:date");
       const author = getTag("dc:creator") || getTag("author");
 
-      // Extract image from enclosure, media:content, or content
       let imageUrl: string | null = null;
       const enclosure = item.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
       if (enclosure?.[1]) imageUrl = enclosure[1];
@@ -182,22 +278,15 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
         if (imgInContent?.[1]) imageUrl = imgInContent[1];
       }
 
-      // Use content:encoded if available, else description
       let body = contentEncoded || description;
-      // Strip HTML tags for clean text
       body = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
       if (!title || title.length < 10 || !link) continue;
 
       articles.push({
-        title,
-        subtitle: description.replace(/<[^>]+>/g, "").substring(0, 200).trim(),
-        content: body,
-        image_url: imageUrl,
-        source_url: link,
-        source_name: sourceName,
-        author: author || null,
-        published_date: pubDate || null,
+        title, subtitle: description.replace(/<[^>]+>/g, "").substring(0, 200).trim(),
+        content: body, image_url: imageUrl, source_url: link,
+        source_name: sourceName, author: author || null, published_date: pubDate || null,
       });
     }
     console.log(`[RSS] Parsed ${articles.length} articles from ${sourceName}`);
@@ -205,59 +294,76 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
   } catch (err) { console.error(`[RSS] Error fetching ${feedUrl}:`, err); return []; }
 }
 
-// ─── NewsAPI Fetcher ─────────────────────────────────────────────
+// ─── NewsAPI Fetcher (expanded for 50 cities) ────────────────────
 async function fetchNewsAPI(apiKey: string): Promise<ExtractedArticle[]> {
   try {
-    console.log("[NewsAPI] Fetching Santa Catarina news...");
-    const query = encodeURIComponent("Santa Catarina OR Florianópolis OR Tubarão OR Criciúma OR Laguna OR Jaguaruna");
-    const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&sortBy=publishedAt&pageSize=20&apiKey=${apiKey}`;
-    const res = await fetch(url);
-    if (!res.ok) { console.error(`[NewsAPI] Failed: ${res.status}`); return []; }
-    const data = await res.json();
-    const articles: ExtractedArticle[] = [];
-    for (const a of (data.articles || [])) {
-      if (!a.title || a.title === "[Removed]" || a.title.length < 10) continue;
-      articles.push({
-        title: cleanTitle(a.title),
-        subtitle: a.description || "",
-        content: a.content || a.description || "",
-        image_url: a.urlToImage || null,
-        source_url: a.url,
-        source_name: a.source?.name || "NewsAPI",
-        author: a.author || null,
-        published_date: a.publishedAt || null,
-      });
+    console.log("[NewsAPI] Fetching news for Sul de SC cities...");
+    // Split into batches to fit API query limits
+    const cityBatches = [
+      "Criciúma OR Tubarão OR Araranguá OR Laguna OR Jaguaruna OR Imbituba",
+      "Florianópolis OR Palhoça OR Itajaí OR Balneário Camboriú OR Navegantes OR Itapema",
+      "Sangão OR Morro da Fumaça OR Braço do Norte OR Orleans OR Garopaba OR Sombrio",
+    ];
+    
+    const allArticles: ExtractedArticle[] = [];
+    
+    for (const batch of cityBatches) {
+      const query = encodeURIComponent(batch);
+      const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&sortBy=publishedAt&pageSize=15&apiKey=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) { console.error(`[NewsAPI] Failed: ${res.status}`); continue; }
+      const data = await res.json();
+      for (const a of (data.articles || [])) {
+        if (!a.title || a.title === "[Removed]" || a.title.length < 10) continue;
+        const fullText = `${a.title} ${a.description || ""} ${a.content || ""}`;
+        // Only include articles about our target cities
+        if (!isAboutTargetCity(fullText)) continue;
+        allArticles.push({
+          title: cleanTitle(a.title), subtitle: a.description || "",
+          content: a.content || a.description || "", image_url: a.urlToImage || null,
+          source_url: a.url, source_name: a.source?.name || "NewsAPI",
+          author: a.author || null, published_date: a.publishedAt || null,
+        });
+      }
     }
-    console.log(`[NewsAPI] Found ${articles.length} articles`);
-    return articles;
+    console.log(`[NewsAPI] Found ${allArticles.length} relevant articles`);
+    return allArticles;
   } catch (err) { console.error("[NewsAPI] Error:", err); return []; }
 }
 
-// ─── APITube Fetcher ─────────────────────────────────────────────
+// ─── APITube Fetcher (expanded) ──────────────────────────────────
 async function fetchAPITube(apiKey: string): Promise<ExtractedArticle[]> {
   try {
     console.log("[APITube] Fetching SC news...");
-    const url = `https://api.apitube.io/v1/news/everything?search.title="Santa Catarina"&search.language=pt&limit=20&api_key=${apiKey}`;
-    const res = await fetch(url);
-    if (!res.ok) { console.error(`[APITube] Failed: ${res.status}`); return []; }
-    const data = await res.json();
-    const articles: ExtractedArticle[] = [];
-    for (const a of (data.results || data.articles || data.data || [])) {
-      const title = a.title || a.headline || "";
-      if (!title || title.length < 10) continue;
-      articles.push({
-        title: cleanTitle(title),
-        subtitle: a.description || a.summary || "",
-        content: a.body || a.content || a.description || "",
-        image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
-        source_url: a.url || a.link || "",
-        source_name: typeof a.source === "object" ? (a.source?.name || a.source?.domain || "APITube") : (typeof a.source === "string" ? a.source : "APITube"),
-        author: a.author || null,
-        published_date: a.publishedAt || a.date || null,
-      });
+    const searches = [
+      '"Santa Catarina" Criciúma',
+      '"Santa Catarina" Tubarão',
+      '"Santa Catarina" Florianópolis',
+    ];
+    const allArticles: ExtractedArticle[] = [];
+    
+    for (const search of searches) {
+      const url = `https://api.apitube.io/v1/news/everything?search.title=${encodeURIComponent(search)}&search.language=pt&limit=15&api_key=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) { console.error(`[APITube] Failed: ${res.status}`); continue; }
+      const data = await res.json();
+      for (const a of (data.results || data.articles || data.data || [])) {
+        const title = a.title || a.headline || "";
+        if (!title || title.length < 10) continue;
+        const fullText = `${title} ${a.description || ""} ${a.body || a.content || ""}`;
+        if (!isAboutTargetCity(fullText)) continue;
+        allArticles.push({
+          title: cleanTitle(title), subtitle: a.description || a.summary || "",
+          content: a.body || a.content || a.description || "",
+          image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
+          source_url: a.url || a.link || "",
+          source_name: typeof a.source === "object" ? (a.source?.name || a.source?.domain || "APITube") : (typeof a.source === "string" ? a.source : "APITube"),
+          author: a.author || null, published_date: a.publishedAt || a.date || null,
+        });
+      }
     }
-    console.log(`[APITube] Found ${articles.length} articles`);
-    return articles;
+    console.log(`[APITube] Found ${allArticles.length} relevant articles`);
+    return allArticles;
   } catch (err) { console.error("[APITube] Error:", err); return []; }
 }
 
@@ -270,7 +376,8 @@ async function processAndSave(
   regions: any[],
   weights: Record<string, number>,
   autoPublish: any,
-  trustScore: number
+  trustScore: number,
+  enableAI: boolean
 ): Promise<boolean> {
   try {
     if (!article.title || article.title.length < 10) return false;
@@ -285,6 +392,13 @@ async function processAndSave(
     // Reject articles without image - image is mandatory
     if (!article.image_url || article.image_url.length < 10) {
       console.warn(`Rejected "${article.title}" - no image`);
+      return false;
+    }
+
+    // Only publish articles about target cities
+    const fullText = `${article.title} ${article.subtitle} ${article.content}`;
+    if (!isAboutTargetCity(fullText)) {
+      console.warn(`Rejected "${article.title}" - not about target city`);
       return false;
     }
 
@@ -304,12 +418,37 @@ async function processAndSave(
       storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
     }
 
+    // If image download failed, reject
+    if (!storedImageUrl) {
+      console.warn(`Rejected "${article.title}" - image download failed`);
+      return false;
+    }
+
     const finalArticle = { ...article, image_url: storedImageUrl };
     const { score, criteria } = scoreArticle(finalArticle, trustScore, weights);
 
-    const fullText = `${article.title} ${article.subtitle} ${article.content}`;
     const categoryId = classifyCategory(fullText, categories);
     const regionId = classifyRegion(fullText, regions);
+
+    // AI Rewrite for richer content
+    let bodyContent = article.content;
+    let excerpt = article.subtitle;
+    let metaDescription: string | null = null;
+
+    if (enableAI) {
+      const rewritten = await rewriteWithAI(article);
+      if (rewritten) {
+        bodyContent = rewritten.content;
+        excerpt = rewritten.excerpt;
+        metaDescription = rewritten.meta_description;
+      }
+    }
+
+    // Fallback: clean body if not rewritten
+    if (!enableAI || !metaDescription) {
+      if (bodyContent.startsWith(article.title)) bodyContent = bodyContent.substring(article.title.length).trim();
+      if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
+    }
 
     let status = "recycled";
     let publishedAt: string | null = null;
@@ -318,20 +457,17 @@ async function processAndSave(
       publishedAt = new Date().toISOString();
     }
 
-    // Remove title/subtitle from body
-    let bodyContent = article.content;
-    if (bodyContent.startsWith(article.title)) bodyContent = bodyContent.substring(article.title.length).trim();
-    if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
-
     const { error } = await supabase.from("articles").insert({
       id: articleId,
       title: article.title,
-      excerpt: article.subtitle,
+      excerpt,
       content: bodyContent,
       image_url: storedImageUrl,
+      image_caption: `Foto: ${article.source_name}`,
+      meta_description: metaDescription,
       source_url: article.source_url,
       source_name: article.source_name,
-      author: article.author,
+      author: "Redação Melhor News",
       category_id: categoryId,
       region_id: regionId,
       score,
@@ -342,7 +478,7 @@ async function processAndSave(
     });
 
     if (error) { console.error(`Insert error for "${article.title}":`, error); return false; }
-    console.log(`✓ Saved: "${article.title}" (score: ${score}, status: ${status}, source: ${article.source_name})`);
+    console.log(`✓ Saved: "${article.title}" (score: ${score}, status: ${status}, cat: ${categoryId ? "yes" : "no"}, region: ${regionId ? "yes" : "no"})`);
     return true;
   } catch (err) { console.error(`Error processing "${article.title}":`, err); return false; }
 }
@@ -359,6 +495,7 @@ Deno.serve(async (req) => {
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     const newsApiKey = Deno.env.get("NEWS_API_KEY");
     const apiTubeKey = Deno.env.get("APITUBE_API_KEY");
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -377,17 +514,17 @@ Deno.serve(async (req) => {
     const autoPublish = settingsMap.auto_publish || { enabled: false, min_score: 7.5 };
     const weights = settingsMap.scoring_weights || {};
     const sources = sourcesRes.data || [];
+    const enableAI = !!lovableApiKey;
 
     let articlesProcessed = 0;
     const allArticles: { article: ExtractedArticle; trustScore: number }[] = [];
 
-    // ─── Source 1: RSS Feeds (Semanário SC + any source with rss_url) ────
+    // ─── Source 1: RSS Feeds ────────────────────────────────────────
     const rssFeeds = [
       { url: "https://semanario-sc.com.br/feed", name: "Semanário SC" },
       { url: "https://semanario-sc.com.br/feed/7/economia/", name: "Semanário SC" },
       { url: "https://semanario-sc.com.br/feed/11/tecnologia/", name: "Semanário SC" },
     ];
-    // Add RSS feeds from news_sources table
     for (const s of sources) {
       if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name });
     }
@@ -398,19 +535,19 @@ Deno.serve(async (req) => {
       for (const a of articles) allArticles.push({ article: a, trustScore: 7 });
     }
 
-    // ─── Source 2: NewsAPI ───────────────────────────────────────────
+    // ─── Source 2: NewsAPI (expanded for 50 cities) ─────────────────
     if (newsApiKey) {
       const newsApiArticles = await fetchNewsAPI(newsApiKey);
       for (const a of newsApiArticles) allArticles.push({ article: a, trustScore: 6 });
     }
 
-    // ─── Source 3: APITube ───────────────────────────────────────────
+    // ─── Source 3: APITube (expanded) ───────────────────────────────
     if (apiTubeKey) {
       const apiTubeArticles = await fetchAPITube(apiTubeKey);
       for (const a of apiTubeArticles) allArticles.push({ article: a, trustScore: 6 });
     }
 
-    // ─── Source 4: Firecrawl deep scraping (existing sources) ────────
+    // ─── Source 4: Firecrawl deep scraping ──────────────────────────
     if (firecrawlKey && sources.length > 0) {
       for (const source of sources) {
         try {
@@ -435,7 +572,6 @@ Deno.serve(async (req) => {
 
           for (const articleUrl of articleUrls) {
             try {
-              // Quick duplicate check
               const { data: existing } = await supabase.from("articles").select("id").eq("source_url", articleUrl).limit(1);
               if (existing?.length) continue;
 
@@ -483,17 +619,17 @@ Deno.serve(async (req) => {
     }
 
     // ─── Save all collected articles ─────────────────────────────────
-    console.log(`[Total] ${allArticles.length} articles collected from all sources. Saving...`);
+    console.log(`[Total] ${allArticles.length} articles collected. Processing with AI=${enableAI}...`);
 
     for (const { article, trustScore } of allArticles) {
-      const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, weights, autoPublish, trustScore);
+      const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, weights, autoPublish, trustScore, enableAI);
       if (saved) articlesProcessed++;
     }
 
     console.log(`[Done] ${articlesProcessed} new articles saved.`);
 
     return new Response(
-      JSON.stringify({ success: true, articlesProcessed, totalCollected: allArticles.length }),
+      JSON.stringify({ success: true, articlesProcessed, totalCollected: allArticles.length, aiEnabled: enableAI }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
