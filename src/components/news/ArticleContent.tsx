@@ -15,6 +15,12 @@ interface ArticleContentProps {
 function cleanContent(raw: string): string[] {
   let text = raw;
 
+  // Remove truncation markers like [+981 chars]
+  text = text.replace(/\[\+\d+\s*chars?\]/gi, "");
+
+  // Remove raw HTML tables, divs, spans and other block elements
+  text = text.replace(/<\/?(table|tr|td|th|thead|tbody|tfoot|div|span|section|aside|nav|header|footer|figure|figcaption|iframe|script|style|form|input|button|select|option|label|ul|ol|li|dl|dt|dd|blockquote|pre|code|br|hr|img|a|em|strong|i|b|u|s|sup|sub|small|big|mark|abbr|cite|dfn|kbd|samp|var|wbr|details|summary|dialog|menu|menuitem|main|article|time|address|caption|col|colgroup|optgroup|fieldset|legend|datalist|output|progress|meter|ruby|rt|rp|bdi|bdo|map|area|source|track|video|audio|canvas|svg|math|noscript|template|slot|picture|object|embed|param|link|meta|base|head|body|html)[^>]*>/gi, " ");
+
   // Remove markdown headings
   text = text.replace(/^#{1,6}\s+.*$/gm, "");
 
