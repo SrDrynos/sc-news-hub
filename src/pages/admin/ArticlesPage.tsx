@@ -225,14 +225,22 @@ const ArticlesPage = () => {
           {articles.map((article) => (
             <Card key={article.id}>
               <CardContent className="flex items-center gap-4 p-4">
-                {article.image_url && (
-                  <img src={article.image_url} alt="" className="w-16 h-16 rounded object-cover flex-shrink-0" />
-                )}
+                <img
+                  src={article.image_url || "/images/placeholder-news.jpg"}
+                  alt={article.title}
+                  className="w-16 h-16 rounded object-cover flex-shrink-0 bg-muted"
+                  onError={(e) => { (e.target as HTMLImageElement).src = "/images/placeholder-news.jpg"; }}
+                />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium truncate">{article.title}</h3>
                   <p className="text-xs text-muted-foreground">
                     {article.source_name || "Sem fonte"} • Nota: {Number(article.score).toFixed(1)} • {article.categories?.name || "Sem categoria"}
                   </p>
+                  {article.source_url && (
+                    <a href={article.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline truncate block">
+                      Fonte: {article.source_url}
+                    </a>
+                  )}
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${
                   article.status === "published" ? "bg-green-100 text-green-700"
