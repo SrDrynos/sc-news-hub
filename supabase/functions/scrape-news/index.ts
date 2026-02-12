@@ -357,85 +357,9 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
   } catch (err) { console.error(`[RSS] Error fetching ${feedUrl}:`, err); return []; }
 }
 
-// ─── NewsAPI Fetcher (broad 24h sweep) ───────────────────────────
-async function fetchNewsAPI(apiKey: string): Promise<ExtractedArticle[]> {
-  try {
-    console.log("[NewsAPI] Fetching ALL news from last 24h (broad sweep)...");
-    // Broad queries to capture everything from SC region
-    const queries = [
-      '"Santa Catarina"',
-      "Criciúma OR Tubarão OR Araranguá OR Laguna OR Florianópolis",
-      "Balneário Camboriú OR Itajaí OR Navegantes OR Palhoça OR Imbituba",
-      "Sangão OR Jaguaruna OR Orleans OR Garopaba OR Sombrio OR Braço do Norte",
-    ];
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    
-    const allArticles: ExtractedArticle[] = [];
-    const seenUrls = new Set<string>();
-    
-    for (const q of queries) {
-      const query = encodeURIComponent(q);
-      const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&from=${since}&sortBy=publishedAt&pageSize=50&apiKey=${apiKey}`;
-      const res = await fetch(url);
-      if (!res.ok) { console.error(`[NewsAPI] Failed: ${res.status}`); continue; }
-      const data = await res.json();
-      for (const a of (data.articles || [])) {
-        if (!a.title || a.title === "[Removed]" || a.title.length < 10) continue;
-        if (a.url && seenUrls.has(a.url)) continue;
-        if (a.url) seenUrls.add(a.url);
-        // Don't filter here — let processAndSave handle city filtering
-        allArticles.push({
-          title: cleanTitle(a.title), subtitle: a.description || "",
-          content: a.content || a.description || "", image_url: a.urlToImage || null,
-          source_url: a.url, source_name: a.source?.name || "NewsAPI",
-          author: a.author || null, published_date: a.publishedAt || null,
-        });
-      }
-    }
-    console.log(`[NewsAPI] Collected ${allArticles.length} articles (pre-filter, last 24h)`);
-    return allArticles;
-  } catch (err) { console.error("[NewsAPI] Error:", err); return []; }
-}
+// (NewsAPI removed — all sources managed via admin "Fontes" page)
 
-// ─── APITube Fetcher (broad 24h sweep) ───────────────────────────
-async function fetchAPITube(apiKey: string): Promise<ExtractedArticle[]> {
-  try {
-    console.log("[APITube] Fetching ALL SC news from last 24h (broad sweep)...");
-    const searches = [
-      '"Santa Catarina"',
-      'Criciúma OR Tubarão OR Araranguá',
-      'Florianópolis OR Palhoça OR Itajaí',
-      'Balneário Camboriú OR Laguna OR Imbituba',
-    ];
-    const allArticles: ExtractedArticle[] = [];
-    const seenUrls = new Set<string>();
-    
-    for (const search of searches) {
-      const url = `https://api.apitube.io/v1/news/everything?search.title=${encodeURIComponent(search)}&search.language=pt&limit=50&api_key=${apiKey}`;
-      const res = await fetch(url);
-      if (!res.ok) { console.error(`[APITube] Failed: ${res.status}`); continue; }
-      const data = await res.json();
-      for (const a of (data.results || data.articles || data.data || [])) {
-        const title = a.title || a.headline || "";
-        if (!title || title.length < 10) continue;
-        const articleUrl = a.url || a.link || "";
-        if (articleUrl && seenUrls.has(articleUrl)) continue;
-        if (articleUrl) seenUrls.add(articleUrl);
-        // Don't filter here — let processAndSave handle city filtering
-        allArticles.push({
-          title: cleanTitle(title), subtitle: a.description || a.summary || "",
-          content: a.body || a.content || a.description || "",
-          image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
-          source_url: articleUrl,
-          source_name: typeof a.source === "object" ? (a.source?.name || a.source?.domain || "APITube") : (typeof a.source === "string" ? a.source : "APITube"),
-          author: a.author || null, published_date: a.publishedAt || a.date || null,
-        });
-      }
-    }
-    console.log(`[APITube] Collected ${allArticles.length} articles (pre-filter, last 24h)`);
-    return allArticles;
-  } catch (err) { console.error("[APITube] Error:", err); return []; }
-}
+// (APITube removed — all sources managed via admin "Fontes" page)
 
 // ─── Process and Save Article ────────────────────────────────────
 async function processAndSave(
@@ -585,8 +509,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
-    const newsApiKey = Deno.env.get("NEWS_API_KEY");
-    const apiTubeKey = Deno.env.get("APITUBE_API_KEY");
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -611,32 +533,16 @@ Deno.serve(async (req) => {
     let articlesProcessed = 0;
     const allArticles: { article: ExtractedArticle; trustScore: number }[] = [];
 
-    // ─── Source 1: RSS Feeds ────────────────────────────────────────
-    const rssFeeds = [
-      { url: "https://semanario-sc.com.br/feed", name: "Semanário SC" },
-      { url: "https://semanario-sc.com.br/feed/7/economia/", name: "Semanário SC" },
-      { url: "https://semanario-sc.com.br/feed/11/tecnologia/", name: "Semanário SC" },
-    ];
+    // ─── RSS Feeds (only from admin "Fontes" page) ──────────────────
+    const rssFeeds: { url: string; name: string; trustScore: number }[] = [];
     for (const s of sources) {
-      if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name });
+      if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name, trustScore: s.trust_score || 5 });
     }
 
     const rssPromises = rssFeeds.map((feed) => fetchRSSArticles(feed.url, feed.name));
     const rssResults = await Promise.all(rssPromises);
-    for (const articles of rssResults) {
-      for (const a of articles) allArticles.push({ article: a, trustScore: 7 });
-    }
-
-    // ─── Source 2: NewsAPI (expanded for 50 cities) ─────────────────
-    if (newsApiKey) {
-      const newsApiArticles = await fetchNewsAPI(newsApiKey);
-      for (const a of newsApiArticles) allArticles.push({ article: a, trustScore: 6 });
-    }
-
-    // ─── Source 3: APITube (expanded) ───────────────────────────────
-    if (apiTubeKey) {
-      const apiTubeArticles = await fetchAPITube(apiTubeKey);
-      for (const a of apiTubeArticles) allArticles.push({ article: a, trustScore: 6 });
+    for (let i = 0; i < rssResults.length; i++) {
+      for (const a of rssResults[i]) allArticles.push({ article: a, trustScore: rssFeeds[i].trustScore });
     }
 
     // ─── Source 4: Firecrawl deep scraping ──────────────────────────
