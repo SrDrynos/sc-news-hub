@@ -150,6 +150,62 @@ function classifyRegion(text: string, regions: Array<{ id: string; keywords: any
   return null;
 }
 
+// ─── Title Similarity Detection ──────────────────────────────────
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[^a-z0-9\s]/g, "") // remove punctuation
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getSignificantWords(normalized: string): Set<string> {
+  const stopwords = new Set([
+    "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas",
+    "um", "uma", "uns", "umas", "o", "a", "os", "as", "e", "ou",
+    "que", "se", "por", "para", "com", "ao", "aos", "pela", "pelo",
+    "pelas", "pelos", "este", "esta", "esse", "essa", "isso", "isto",
+    "mais", "muito", "ha", "ja", "nao", "ser", "ter", "foi", "sao",
+    "esta", "sobre", "apos", "entre", "ate", "tambem", "ainda",
+  ]);
+  return new Set(normalized.split(" ").filter(w => w.length > 2 && !stopwords.has(w)));
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const wordsA = getSignificantWords(normalizeTitle(a));
+  const wordsB = getSignificantWords(normalizeTitle(b));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) { if (wordsB.has(w)) intersection++; }
+  // Jaccard similarity
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+const SIMILARITY_THRESHOLD = 0.6; // 60% word overlap = same subject
+
+async function isSimilarToExisting(title: string, supabase: any): Promise<boolean> {
+  // Fetch recent published/draft article titles (last 7 days)
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentArticles } = await supabase
+    .from("articles")
+    .select("title")
+    .gte("created_at", since)
+    .limit(500);
+
+  if (!recentArticles?.length) return false;
+
+  for (const existing of recentArticles) {
+    const sim = titleSimilarity(title, existing.title);
+    if (sim >= SIMILARITY_THRESHOLD) {
+      console.warn(`[Similarity] "${title}" ≈ "${existing.title}" (${(sim * 100).toFixed(0)}%) — REJECTED`);
+      return true;
+    }
+  }
+  return false;
+}
+
 // ─── Check if article is about a target city ─────────────────────
 function isAboutTargetCity(text: string): boolean {
   const lower = text.toLowerCase();
@@ -409,6 +465,10 @@ async function processAndSave(
     }
     const { data: byTitle } = await supabase.from("articles").select("id").eq("title", article.title).limit(1);
     if (byTitle?.length) return false;
+
+    // Check similarity with existing titles (same subject, different wording)
+    const isSimilar = await isSimilarToExisting(article.title, supabase);
+    if (isSimilar) return false;
 
     const articleId = crypto.randomUUID();
 
