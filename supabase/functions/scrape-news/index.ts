@@ -282,6 +282,12 @@ async function processAndSave(
       return false;
     }
 
+    // Reject articles without image - image is mandatory
+    if (!article.image_url || article.image_url.length < 10) {
+      console.warn(`Rejected "${article.title}" - no image`);
+      return false;
+    }
+
     // Check duplicates by source_url or title
     if (article.source_url) {
       const { data: byUrl } = await supabase.from("articles").select("id").eq("source_url", article.source_url).limit(1);
