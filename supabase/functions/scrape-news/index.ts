@@ -250,8 +250,8 @@ ${article.content.substring(0, 3000)}
 Responda APENAS com um JSON válido no formato:
 {
   "content": "<p>Introdução...</p><h2>Subtítulo 1</h2><p>Desenvolvimento...</p>...<p>Conclusão...</p>",
-  "excerpt": "Resumo explicativo da notícia em até 200 caracteres",
-  "meta_description": "Meta description SEO de 150-160 caracteres"
+  "excerpt": "Descrição jornalística da notícia com até 500 palavras, otimizada para SEO, incluindo palavras-chave relevantes e contexto completo do fato noticioso. Deve funcionar como um resumo expandido que capture a essência da notícia.",
+  "meta_description": "Meta description SEO de 150-160 caracteres com palavra-chave principal"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -350,30 +350,33 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
   } catch (err) { console.error(`[RSS] Error fetching ${feedUrl}:`, err); return []; }
 }
 
-// ─── NewsAPI Fetcher (expanded for 50 cities) ────────────────────
+// ─── NewsAPI Fetcher (broad 24h sweep) ───────────────────────────
 async function fetchNewsAPI(apiKey: string): Promise<ExtractedArticle[]> {
   try {
-    console.log("[NewsAPI] Fetching news for Sul de SC cities...");
-    // Split into batches to fit API query limits
-    const cityBatches = [
-      "Criciúma OR Tubarão OR Araranguá OR Laguna OR Jaguaruna OR Imbituba",
-      "Florianópolis OR Palhoça OR Itajaí OR Balneário Camboriú OR Navegantes OR Itapema",
-      "Sangão OR Morro da Fumaça OR Braço do Norte OR Orleans OR Garopaba OR Sombrio",
+    console.log("[NewsAPI] Fetching ALL news from last 24h (broad sweep)...");
+    // Broad queries to capture everything from SC region
+    const queries = [
+      '"Santa Catarina"',
+      "Criciúma OR Tubarão OR Araranguá OR Laguna OR Florianópolis",
+      "Balneário Camboriú OR Itajaí OR Navegantes OR Palhoça OR Imbituba",
+      "Sangão OR Jaguaruna OR Orleans OR Garopaba OR Sombrio OR Braço do Norte",
     ];
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     
     const allArticles: ExtractedArticle[] = [];
+    const seenUrls = new Set<string>();
     
-    for (const batch of cityBatches) {
-      const query = encodeURIComponent(batch);
-      const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&sortBy=publishedAt&pageSize=15&apiKey=${apiKey}`;
+    for (const q of queries) {
+      const query = encodeURIComponent(q);
+      const url = `https://newsapi.org/v2/everything?q=${query}&language=pt&from=${since}&sortBy=publishedAt&pageSize=50&apiKey=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) { console.error(`[NewsAPI] Failed: ${res.status}`); continue; }
       const data = await res.json();
       for (const a of (data.articles || [])) {
         if (!a.title || a.title === "[Removed]" || a.title.length < 10) continue;
-        const fullText = `${a.title} ${a.description || ""} ${a.content || ""}`;
-        // Only include articles about our target cities
-        if (!isAboutTargetCity(fullText)) continue;
+        if (a.url && seenUrls.has(a.url)) continue;
+        if (a.url) seenUrls.add(a.url);
+        // Don't filter here — let processAndSave handle city filtering
         allArticles.push({
           title: cleanTitle(a.title), subtitle: a.description || "",
           content: a.content || a.description || "", image_url: a.urlToImage || null,
@@ -382,43 +385,47 @@ async function fetchNewsAPI(apiKey: string): Promise<ExtractedArticle[]> {
         });
       }
     }
-    console.log(`[NewsAPI] Found ${allArticles.length} relevant articles`);
+    console.log(`[NewsAPI] Collected ${allArticles.length} articles (pre-filter, last 24h)`);
     return allArticles;
   } catch (err) { console.error("[NewsAPI] Error:", err); return []; }
 }
 
-// ─── APITube Fetcher (expanded) ──────────────────────────────────
+// ─── APITube Fetcher (broad 24h sweep) ───────────────────────────
 async function fetchAPITube(apiKey: string): Promise<ExtractedArticle[]> {
   try {
-    console.log("[APITube] Fetching SC news...");
+    console.log("[APITube] Fetching ALL SC news from last 24h (broad sweep)...");
     const searches = [
-      '"Santa Catarina" Criciúma',
-      '"Santa Catarina" Tubarão',
-      '"Santa Catarina" Florianópolis',
+      '"Santa Catarina"',
+      'Criciúma OR Tubarão OR Araranguá',
+      'Florianópolis OR Palhoça OR Itajaí',
+      'Balneário Camboriú OR Laguna OR Imbituba',
     ];
     const allArticles: ExtractedArticle[] = [];
+    const seenUrls = new Set<string>();
     
     for (const search of searches) {
-      const url = `https://api.apitube.io/v1/news/everything?search.title=${encodeURIComponent(search)}&search.language=pt&limit=15&api_key=${apiKey}`;
+      const url = `https://api.apitube.io/v1/news/everything?search.title=${encodeURIComponent(search)}&search.language=pt&limit=50&api_key=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) { console.error(`[APITube] Failed: ${res.status}`); continue; }
       const data = await res.json();
       for (const a of (data.results || data.articles || data.data || [])) {
         const title = a.title || a.headline || "";
         if (!title || title.length < 10) continue;
-        const fullText = `${title} ${a.description || ""} ${a.body || a.content || ""}`;
-        if (!isAboutTargetCity(fullText)) continue;
+        const articleUrl = a.url || a.link || "";
+        if (articleUrl && seenUrls.has(articleUrl)) continue;
+        if (articleUrl) seenUrls.add(articleUrl);
+        // Don't filter here — let processAndSave handle city filtering
         allArticles.push({
           title: cleanTitle(title), subtitle: a.description || a.summary || "",
           content: a.body || a.content || a.description || "",
           image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
-          source_url: a.url || a.link || "",
+          source_url: articleUrl,
           source_name: typeof a.source === "object" ? (a.source?.name || a.source?.domain || "APITube") : (typeof a.source === "string" ? a.source : "APITube"),
           author: a.author || null, published_date: a.publishedAt || a.date || null,
         });
       }
     }
-    console.log(`[APITube] Found ${allArticles.length} relevant articles`);
+    console.log(`[APITube] Collected ${allArticles.length} articles (pre-filter, last 24h)`);
     return allArticles;
   } catch (err) { console.error("[APITube] Error:", err); return []; }
 }
@@ -508,6 +515,21 @@ async function processAndSave(
     if (!enableAI || !metaDescription) {
       if (bodyContent.startsWith(article.title)) bodyContent = bodyContent.substring(article.title.length).trim();
       if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
+    }
+
+    // Ensure excerpt is always populated (up to 500 words, SEO-friendly)
+    if (!excerpt || excerpt.length < 50) {
+      const plainText = bodyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const words = plainText.split(" ");
+      excerpt = words.slice(0, Math.min(500, words.length)).join(" ");
+      if (words.length > 500) excerpt += "...";
+    }
+
+    // Ensure meta_description is always populated (150-160 chars for SEO)
+    if (!metaDescription || metaDescription.length < 50) {
+      const plainExcerpt = (excerpt || article.subtitle || bodyContent).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      metaDescription = plainExcerpt.substring(0, 157);
+      if (plainExcerpt.length > 157) metaDescription += "...";
     }
 
     let status = "recycled";
