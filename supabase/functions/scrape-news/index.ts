@@ -78,15 +78,22 @@ function extractSubtitle(content: string, title: string): string {
 // ─── Image Storage ───────────────────────────────────────────────
 async function downloadAndStoreImage(imageUrl: string, articleId: string, supabase: any, supabaseUrl: string): Promise<string | null> {
   try {
-    const response = await fetch(imageUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; MelhorNewsSC/1.0)" } });
+    const response = await fetch(imageUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "image/*,*/*;q=0.8",
+        "Referer": new URL(imageUrl).origin,
+      },
+      redirect: "follow",
+    });
     if (!response.ok) return null;
     const contentType = response.headers.get("content-type") || "image/jpeg";
-    if (!contentType.startsWith("image/")) return null;
+    if (!contentType.startsWith("image/") && !contentType.includes("octet-stream")) return null;
     const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength < 1000 || arrayBuffer.byteLength > 5 * 1024 * 1024) return null;
+    if (arrayBuffer.byteLength < 500 || arrayBuffer.byteLength > 10 * 1024 * 1024) return null;
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const filePath = `articles/${articleId}.${ext}`;
-    const { error } = await supabase.storage.from("article-images").upload(filePath, arrayBuffer, { contentType, upsert: true });
+    const { error } = await supabase.storage.from("article-images").upload(filePath, arrayBuffer, { contentType: contentType.startsWith("image/") ? contentType : "image/jpeg", upsert: true });
     if (error) { console.error("Image upload error:", error); return null; }
     return `${supabaseUrl}/storage/v1/object/public/article-images/${filePath}`;
   } catch (err) { console.error("Image download error:", err); return null; }
@@ -452,16 +459,12 @@ async function processAndSave(
       return false;
     }
 
-    // Reject articles without image - image is mandatory
-    if (!article.image_url || article.image_url.length < 10) {
-      console.warn(`Rejected "${article.title}" - no image`);
-      return false;
-    }
-
-    // Only publish articles about target cities
+    // Check if article is about SC region (target cities OR generic SC mentions)
     const fullText = `${article.title} ${article.subtitle} ${article.content}`;
-    if (!isAboutTargetCity(fullText)) {
-      console.warn(`Rejected "${article.title}" - not about target city`);
+    const isAboutCity = isAboutTargetCity(fullText);
+    const isAboutSC = /santa catarina|\bsc\b|catarinense|sul catarinense|norte catarinense|oeste catarinense|vale do itajaí|serra catarinense|litoral sul|litoral norte/i.test(fullText);
+    if (!isAboutCity && !isAboutSC) {
+      console.warn(`Rejected "${article.title}" - not about target city or SC`);
       return false;
     }
 
@@ -479,16 +482,16 @@ async function processAndSave(
 
     const articleId = crypto.randomUUID();
 
-    // Download and store image locally
+    // Download and store image locally (optional - use placeholder if fails)
     let storedImageUrl: string | null = null;
     if (article.image_url) {
       storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
     }
 
-    // If image download failed, reject
+    // Use placeholder image if download failed
     if (!storedImageUrl) {
-      console.warn(`Rejected "${article.title}" - image download failed`);
-      return false;
+      console.log(`[Image] Using placeholder for "${article.title}" (original: ${article.image_url || "none"})`);
+      storedImageUrl = `${supabaseUrl}/storage/v1/object/public/article-images/placeholder-news.jpg`;
     }
 
     const finalArticle = { ...article, image_url: storedImageUrl };
