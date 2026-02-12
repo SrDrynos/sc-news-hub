@@ -520,6 +520,13 @@ async function processAndSave(
       if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
     }
 
+    // ─── Minimum word count gate (300 words) ───────────────────────
+    const finalWordCount = bodyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+    if (finalWordCount < 300) {
+      console.warn(`[WordCount] Rejected "${article.title}" — only ${finalWordCount} words (min 300)`);
+      return false;
+    }
+
     // Ensure excerpt is always populated (up to 500 words, SEO-friendly)
     if (!excerpt || excerpt.length < 50) {
       const plainText = bodyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
