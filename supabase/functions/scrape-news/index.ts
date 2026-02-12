@@ -251,7 +251,7 @@ async function fetchAPITube(apiKey: string): Promise<ExtractedArticle[]> {
         content: a.body || a.content || a.description || "",
         image_url: a.image?.url || a.imageUrl || a.thumbnail || null,
         source_url: a.url || a.link || "",
-        source_name: a.source?.name || a.source || "APITube",
+        source_name: typeof a.source === "object" ? (a.source?.name || a.source?.domain || "APITube") : (typeof a.source === "string" ? a.source : "APITube"),
         author: a.author || null,
         published_date: a.publishedAt || a.date || null,
       });
