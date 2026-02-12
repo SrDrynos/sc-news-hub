@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, CheckCircle, XCircle, Plus } from "lucide-react";
 import type { Article } from "@/hooks/useArticles";
 import ArticleForm from "@/components/admin/ArticleForm";
+import { auditArticle, formatAuditRefusal } from "@/lib/editorialAudit";
 
 function generateSlug(title: string): string {
   return title
@@ -53,12 +54,17 @@ const ArticlesPage = () => {
   const qc = useQueryClient();
 
   const handlePublish = async (article: Article) => {
+    const audit = auditArticle(article);
+    if (!audit.approved) {
+      toast({ title: "❌ Publicação bloqueada", description: formatAuditRefusal(audit), variant: "destructive", duration: 15000 });
+      return;
+    }
     await updateArticle.mutateAsync({
       id: article.id,
       status: "published" as any,
       published_at: new Date().toISOString(),
     });
-    toast({ title: "Artigo publicado!" });
+    toast({ title: "✅ Artigo publicado!" });
   };
 
   const handleRecycle = async (article: Article) => {
@@ -97,6 +103,13 @@ const ArticlesPage = () => {
       toast({ title: "Título é obrigatório", variant: "destructive" });
       return;
     }
+    if (publishNow) {
+      const audit = auditArticle(newArticle);
+      if (!audit.approved) {
+        toast({ title: "❌ Publicação bloqueada", description: formatAuditRefusal(audit), variant: "destructive", duration: 15000 });
+        return;
+      }
+    }
     setCreating(true);
     try {
       const slug = generateSlug(newArticle.title);
@@ -121,7 +134,7 @@ const ArticlesPage = () => {
       qc.invalidateQueries({ queryKey: ["articles"] });
       setShowCreate(false);
       setNewArticle(emptyArticle);
-      toast({ title: publishNow ? "Notícia publicada!" : "Rascunho salvo!" });
+      toast({ title: publishNow ? "✅ Notícia publicada!" : "Rascunho salvo!" });
     } catch (e: any) {
       toast({ title: "Erro ao criar notícia", description: e.message, variant: "destructive" });
     } finally {

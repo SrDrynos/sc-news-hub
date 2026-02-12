@@ -29,9 +29,11 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
   const { toast } = useToast();
 
   const wordCount = useMemo(() => countWords(data.content || ""), [data.content]);
+  const excerptWords = useMemo(() => countWords(data.excerpt || ""), [data.excerpt]);
   const metaLen = (data.meta_description || "").length;
 
-  const wordCountColor = wordCount < 900 ? "text-amber-600" : wordCount > 1200 ? "text-red-600" : "text-green-600";
+  const wordCountColor = wordCount < 150 ? "text-red-600" : wordCount > 300 ? "text-red-600" : "text-green-600";
+  const excerptCountColor = excerptWords > 100 ? "text-red-600" : "text-green-600";
   const metaColor = metaLen === 0 ? "text-muted-foreground" : metaLen < 150 ? "text-amber-600" : metaLen > 160 ? "text-red-600" : "text-green-600";
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,16 +93,21 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
 
       {/* Subtítulo */}
       <div>
-        <Label>Subtítulo (linha fina)</Label>
+        <div className="flex items-center justify-between mb-1">
+          <Label>Subtítulo (linha fina) *</Label>
+          <span className={`text-xs font-medium ${excerptCountColor}`}>
+            {excerptWords} palavras {excerptWords > 100 ? "(máx. 100)" : "✓"}
+          </span>
+        </div>
         <Textarea placeholder="Resumo explicativo da notícia (não repita o título)" value={data.excerpt || ""} onChange={(e) => onChange({ ...data, excerpt: e.target.value })} rows={2} />
       </div>
 
       {/* Conteúdo */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <Label>Conteúdo</Label>
+          <Label>Conteúdo *</Label>
           <span className={`text-xs font-medium ${wordCountColor}`}>
-            {wordCount} palavras {wordCount < 900 ? "(mín. 900)" : wordCount > 1200 ? "(máx. 1200)" : "✓"}
+            {wordCount} palavras {wordCount < 150 ? "(mín. 150)" : wordCount > 300 ? "(máx. 300)" : "✓"}
           </span>
         </div>
         <Textarea
