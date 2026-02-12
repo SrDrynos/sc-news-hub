@@ -38,6 +38,7 @@ const SourcesPage = () => {
   const [open, setOpen] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [newSource, setNewSource] = useState({ name: "", url: "", trust_score: 5 });
+  const [editSource, setEditSource] = useState<any>(null);
 
   // API/RSS management state
   const [showApiForm, setShowApiForm] = useState(false);
@@ -77,6 +78,23 @@ const SourcesPage = () => {
     await supabase.from("news_sources").delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["news_sources"] });
     toast({ title: "Fonte removida" });
+  };
+
+  const handleEditSave = async () => {
+    if (!editSource) return;
+    const { error } = await supabase.from("news_sources").update({
+      name: editSource.name,
+      url: editSource.url,
+      rss_url: editSource.rss_url,
+      trust_score: editSource.trust_score,
+    } as any).eq("id", editSource.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Fonte atualizada!" });
+      setEditSource(null);
+      qc.invalidateQueries({ queryKey: ["news_sources"] });
+    }
   };
 
   const handleScrapeAll = async () => {
@@ -193,6 +211,9 @@ const SourcesPage = () => {
                   <span className="text-xs text-muted-foreground">{source.active ? "Ativa" : "Inativa"}</span>
                   <Switch checked={source.active} onCheckedChange={() => toggleActive(source.id, source.active)} />
                 </div>
+                <Button size="sm" variant="ghost" onClick={() => setEditSource({ ...source })} title="Editar">
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 {isAdmin && (
                   <Button size="sm" variant="ghost" onClick={() => handleDelete(source.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -345,6 +366,38 @@ const SourcesPage = () => {
               <Button onClick={handleApiSave}>{editingApiId ? "Salvar" : "Adicionar"}</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog Editar Fonte RSS */}
+      <Dialog open={!!editSource} onOpenChange={() => setEditSource(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Fonte</DialogTitle>
+          </DialogHeader>
+          {editSource && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome da fonte</Label>
+                <Input value={editSource.name} onChange={(e) => setEditSource({ ...editSource, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>URL do site</Label>
+                <Input value={editSource.url} onChange={(e) => setEditSource({ ...editSource, url: e.target.value })} />
+              </div>
+              <div>
+                <Label>URL do RSS Feed</Label>
+                <Input placeholder="https://site.com/feed" value={editSource.rss_url || ""} onChange={(e) => setEditSource({ ...editSource, rss_url: e.target.value })} />
+              </div>
+              <div>
+                <Label>Nível de confiança (0-10)</Label>
+                <Input type="number" min={0} max={10} value={editSource.trust_score} onChange={(e) => setEditSource({ ...editSource, trust_score: Number(e.target.value) })} />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setEditSource(null)}>Cancelar</Button>
+                <Button onClick={handleEditSave}>Salvar</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
