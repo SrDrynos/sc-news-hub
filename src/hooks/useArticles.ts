@@ -28,9 +28,22 @@ export const usePublishedArticles = (categorySlug?: string, regionSlug?: string,
   return useQuery({
     queryKey: ["articles", "published", categorySlug, regionSlug, limit],
     queryFn: async () => {
+      // Build select with !inner joins when filtering by category/region
+      let selectParts = "*";
+      if (categorySlug) {
+        selectParts += ", categories!inner(name, slug)";
+      } else {
+        selectParts += ", categories(name, slug)";
+      }
+      if (regionSlug) {
+        selectParts += ", regions!inner(name, slug)";
+      } else {
+        selectParts += ", regions(name, slug)";
+      }
+
       let query = supabase
         .from("articles")
-        .select("*, categories(name, slug), regions(name, slug)")
+        .select(selectParts)
         .eq("status", "published")
         .lte("published_at", new Date().toISOString())
         .order("published_at", { ascending: false })
@@ -45,15 +58,7 @@ export const usePublishedArticles = (categorySlug?: string, regionSlug?: string,
 
       const { data, error } = await query;
       if (error) throw error;
-      
-      let filtered = data || [];
-      if (categorySlug) {
-        filtered = filtered.filter((a: any) => a.categories !== null);
-      }
-      if (regionSlug) {
-        filtered = filtered.filter((a: any) => a.regions !== null);
-      }
-      return filtered as Article[];
+      return (data || []) as Article[];
     },
   });
 };
