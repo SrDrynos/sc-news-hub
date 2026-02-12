@@ -7,12 +7,12 @@ const Footer = () => {
 
   return (
     <footer className="bg-primary text-primary-foreground">
-      {/* Ad Banner */}
-      <div className="bg-muted py-4">
+      {/* Aviso Agregador */}
+      <div className="bg-muted py-3 border-b border-border">
         <div className="container">
-          <div className="ad-banner-footer">
-            <span className="text-muted-foreground">Anúncio 728x90</span>
-          </div>
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
+            <strong>Aviso Importante:</strong> O Melhor News é um site agregador de notícias. Publicamos apenas resumos informativos e direcionamos o leitor para a fonte original. Não possuímos vínculo com os portais citados e não nos responsabilizamos pelo conteúdo completo publicado em sites externos.
+          </p>
         </div>
       </div>
 
