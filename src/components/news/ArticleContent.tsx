@@ -5,139 +5,68 @@ interface ArticleContentProps {
 }
 
 /**
- * Aggressively cleans scraped article content, removing:
- * - Navigation menus, footer content, cookie notices
- * - Share button text, social media links
- * - Markdown artifacts, embedded URLs
- * - Ad placeholders, search bars
- * - Duplicate titles/subtitles
+ * Renders article content that may be clean HTML (<p>, <h2>, <h3>) or scraped markdown.
+ * For clean HTML: renders directly with dangerouslySetInnerHTML.
+ * For scraped/dirty content: cleans and renders as paragraphs.
  */
-function cleanContent(raw: string): string[] {
+function isCleanHtml(raw: string): boolean {
+  // If it starts with a proper HTML tag and has structured paragraphs, treat as clean HTML
+  const trimmed = raw.trim();
+  return /^<(p|h[1-6]|div|article)/i.test(trimmed) && (trimmed.match(/<\/p>/gi) || []).length >= 2;
+}
+
+function cleanScrapedContent(raw: string): string[] {
   let text = raw;
 
   // Remove truncation markers like [+981 chars]
   text = text.replace(/\[\+\d+\s*chars?\]/gi, "");
 
-  // Remove raw HTML tables, divs, spans and other block elements
-  text = text.replace(/<\/?(table|tr|td|th|thead|tbody|tfoot|div|span|section|aside|nav|header|footer|figure|figcaption|iframe|script|style|form|input|button|select|option|label|ul|ol|li|dl|dt|dd|blockquote|pre|code|br|hr|img|a|em|strong|i|b|u|s|sup|sub|small|big|mark|abbr|cite|dfn|kbd|samp|var|wbr|details|summary|dialog|menu|menuitem|main|article|time|address|caption|col|colgroup|optgroup|fieldset|legend|datalist|output|progress|meter|ruby|rt|rp|bdi|bdo|map|area|source|track|video|audio|canvas|svg|math|noscript|template|slot|picture|object|embed|param|link|meta|base|head|body|html)[^>]*>/gi, " ");
+  // Convert block-level HTML tags to paragraph breaks before stripping
+  text = text.replace(/<\/?(p|div|section|article|aside|header|footer|figure|figcaption|blockquote|pre|ul|ol|li|dl|dt|dd|br|hr)[^>]*>/gi, "\n\n");
+  text = text.replace(/<\/?(h[1-6])[^>]*>/gi, "\n\n");
+
+  // Remove remaining HTML tags
+  text = text.replace(/<[^>]+>/g, " ");
 
   // Remove markdown headings
   text = text.replace(/^#{1,6}\s+.*$/gm, "");
-
-  // Remove markdown bold/italic markers
   text = text.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
 
-  // Remove markdown links [text](url) → keep text only if it's not a nav link
+  // Remove markdown links [text](url)
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, (_, linkText) => {
-    // Drop navigation-style links
     if (/^(ver|leia|saiba|clique|acesse|página|home|voltar|buscar|fechar)/i.test(linkText.trim())) return "";
     if (linkText.trim().length < 4) return "";
     return linkText;
   });
 
-  // Remove markdown images
+  // Remove images, URLs
   text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, "");
-
-  // Remove all URLs (standalone or in parentheses)
   text = text.replace(/\(https?:\/\/[^)]+\)/g, "");
   text = text.replace(/https?:\/\/\S+/g, "");
 
-  // Remove encoded URLs
-  text = text.replace(/%[0-9A-Fa-f]{2}/g, " ");
-
-  // Remove navigation/menu lines (- ITEM - ITEM pattern)
+  // Remove navigation/menu artifacts
   text = text.replace(/^[\s-]*(-\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\w\s()]+){2,}$/gm, "");
-
-  // Remove lines that look like nav items (starts with - followed by a short capitalized phrase)
-  text = text.replace(/^-\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]{1,30}$/gm, "");
-
-  // Remove share prompts
   text = text.replace(/Compartilhe?\s+(no|via|pelo)\s+\w+\S*/gi, "");
-  text = text.replace(/^Compartilhar:?\s*$/gm, "");
-
-  // Remove social media references
   text = text.replace(/^-?\s*(WhatsApp|Facebook|Instagram|Twitter|Youtube|Telegram|LinkedIn)\s*$/gim, "");
 
-  // Remove cookie/LGPD notices
+  // Remove cookie/footer/copyright
   text = text.replace(/Utilizamos cookies.*$/gim, "");
-  text = text.replace(/Ao utilizar este site.*$/gim, "");
-
-  // Remove "Buscar" / search related
-  text = text.replace(/Buscar\s*Buscar\s*Fechar\s*\[?x\]?/gi, "");
-  text = text.replace(/^Buscar.*$/gim, "");
-
-  // Remove ad placeholders
-  text = text.replace(/^Anúncio\s+\d+x\d+\s*$/gim, "");
-
-  // Remove photo/credit lines
-  text = text.replace(/^!?Fotos?:.*$/gim, "");
-  text = text.replace(/^Imagem:.*$/gim, "");
-  text = text.replace(/^Crédito:.*$/gim, "");
-  text = text.replace(/^Foto:\s*Reprodução.*$/gim, "");
-
-  // Remove source attribution lines (we show this separately)
-  text = text.replace(/^Fonte:.*$/gim, "");
-
-  // Remove date/author meta lines
-  text = text.replace(/^\*?\*?\d{2}\/\d{2}\/\d{4}\s+\d{2}h?\d{2}\*?\*?\s*\\?\|.*$/gim, "");
-  text = text.replace(/^Por:\s*.*$/gim, "");
-
-  // Remove "QUEM SOMOS", "CONTATO", footer-style lines
-  text = text.replace(/^.*QUEM SOMOS.*$/gim, "");
-  text = text.replace(/^.*PUBLICAÇÕES LEGAIS.*$/gim, "");
-  text = text.replace(/^.*COLUNISTAS.*$/gim, "");
-  text = text.replace(/^.*PÁGINA INICIAL.*$/gim, "");
-  text = text.replace(/^.*EDIÇÕES? ANTIG.*$/gim, "");
-  text = text.replace(/^.*PREVISÃO DO TEMPO.*$/gim, "");
-  text = text.replace(/^.*PODCAST.*$/gim, "");
-  text = text.replace(/^.*VER \+.*$/gim, "");
-  text = text.replace(/^.*COTIDIANO.*$/gim, "");
-  text = text.replace(/^.*SEGURANÇA.*$/gim, "");
-
-  // Remove address/contact lines
-  text = text.replace(/^.*Avenida\s+\w.*sala\s+\d+.*$/gim, "");
-  text = text.replace(/^.*WhatsApp\s*\(\d{2}\).*$/gim, "");
-
-  // Remove copyright lines
   text = text.replace(/^.*©.*direitos reservados.*$/gim, "");
   text = text.replace(/^.*Todos os direitos.*$/gim, "");
 
-  // Remove "Notícias de X" site taglines
-  text = text.replace(/^!?Notícias de\s+.*$/gim, "");
-
-  // Remove horizontal rules
-  text = text.replace(/^[-_*]{3,}\s*$/gm, "");
-
-  // Remove pipe separators
-  text = text.replace(/\\\|/g, " ");
+  // Remove pipe separators and horizontal rules
   text = text.replace(/\|/g, " ");
-
-  // Remove lines that are just punctuation or whitespace
-  text = text.replace(/^[\s\-–—*•]+$/gm, "");
-
-  // Remove "Fechar [x]" type UI elements
-  text = text.replace(/Fechar\s*\[?\s*x\s*\]?/gi, "");
-
-  // Remove lines ending with "...)" or "..." that look like truncated sidebar links
-  text = text.replace(/^.*\.\.\.\s*\)?\s*$/gm, "");
-
-  // Remove lines that look like sidebar article titles (short lines ending with ...)
-  text = text.replace(/^.{10,80}\.\.\.\s*$/gm, "");
-
-  // Remove lines containing "é encontrado" pattern duplicates (sidebar artifacts)
-  text = text.replace(/^.*é encontrado\"\).*$/gm, "");
+  text = text.replace(/^[-_*]{3,}\s*$/gm, "");
 
   // Clean excessive whitespace
   text = text.replace(/\n{3,}/g, "\n\n");
   text = text.replace(/\s{2,}/g, " ");
 
-  // Split, trim, filter
   return text
     .split("\n\n")
     .map((p) => p.replace(/\n/g, " ").trim())
     .filter((p) => {
       if (p.length < 20) return false;
-      // Skip lines that are mostly special characters
       const alphaRatio = (p.match(/[a-záéíóúâêîôûãõçà]/gi) || []).length / p.length;
       if (alphaRatio < 0.5) return false;
       return true;
@@ -145,7 +74,28 @@ function cleanContent(raw: string): string[] {
 }
 
 const ArticleContent = ({ content }: ArticleContentProps) => {
-  const paragraphs = useMemo(() => cleanContent(content), [content]);
+  const isHtml = useMemo(() => isCleanHtml(content), [content]);
+
+  if (!content || content.trim().length === 0) {
+    return (
+      <div className="article-body prose prose-lg max-w-none">
+        <p className="text-muted-foreground italic">Conteúdo não disponível.</p>
+      </div>
+    );
+  }
+
+  // Clean HTML from the scraper/editor: render directly
+  if (isHtml) {
+    return (
+      <div
+        className="article-body prose prose-lg max-w-none [&>p]:text-foreground [&>p]:leading-[1.85] [&>p]:mb-6 [&>p]:text-lg [&>p]:font-serif [&>h2]:text-2xl [&>h2]:font-heading [&>h2]:font-bold [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-xl [&>h3]:font-heading [&>h3]:font-semibold [&>h3]:mt-8 [&>h3]:mb-3"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  // Fallback: scraped/dirty content — clean and render as paragraphs
+  const paragraphs = cleanScrapedContent(content);
 
   if (paragraphs.length === 0) {
     return (
@@ -160,13 +110,11 @@ const ArticleContent = ({ content }: ArticleContentProps) => {
       {paragraphs.map((paragraph, index) => (
         <div key={index}>
           <p className="text-foreground leading-[1.85] mb-6 text-lg font-serif">{paragraph}</p>
-          {/* AdSense: após 3º parágrafo — posição nativa no conteúdo */}
           {index === 2 && paragraphs.length > 4 && (
             <div className="my-8 not-prose flex justify-center">
               <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
             </div>
           )}
-          {/* AdSense: após 7º parágrafo em artigos longos */}
           {index === 6 && paragraphs.length > 8 && (
             <div className="my-8 not-prose flex justify-center">
               <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
