@@ -122,16 +122,7 @@ const HeroSlider = () => {
                   <h1 className="text-xl md:text-2xl lg:text-3xl font-heading font-bold mb-2 md:mb-3 leading-tight">
                     {current.title}
                   </h1>
-                  {current.excerpt && (
-                    <p className="hidden md:block text-white/90 text-base mb-3 line-clamp-2">
-                      {current.excerpt}
-                    </p>
-                  )}
                   <div className="flex items-center gap-3 text-xs md:text-sm text-white/80">
-                    {current.source_name && <span>Fonte: {current.source_name}</span>}
-                    {current.image_url && current.source_name && (
-                      <span>Imagem: {current.source_name}</span>
-                    )}
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
                       {formatDate(current.published_at)}
