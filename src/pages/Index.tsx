@@ -3,6 +3,7 @@ import HeroSlider from "@/components/news/HeroSlider";
 import CategorySection from "@/components/news/CategorySection";
 import Newsletter from "@/components/news/Newsletter";
 import Sidebar from "@/components/news/Sidebar";
+import AdSlot from "@/components/ads/AdSlot";
 import { useCategories } from "@/hooks/useArticles";
 
 const Index = () => {
@@ -12,7 +13,7 @@ const Index = () => {
     <Layout>
       <div className="bg-muted py-4">
         <div className="container">
-          <div className="ad-banner-top"><span>Anúncio 728x90</span></div>
+          <AdSlot position="leaderboard_top" className="hidden md:flex" />
         </div>
       </div>
 
@@ -25,10 +26,10 @@ const Index = () => {
               <div key={cat.id}>
                 <CategorySection title={cat.name} slug={cat.slug} color={cat.slug} />
                 {index === 1 && (
-                  <div className="my-8"><div className="ad-banner h-[250px]"><span>Anúncio Responsivo</span></div></div>
+                  <AdSlot position="content_1" className="my-8" />
                 )}
                 {index === 4 && (
-                  <div className="my-8"><div className="ad-banner h-[250px]"><span>Anúncio Responsivo</span></div></div>
+                  <AdSlot position="content_2" className="my-8" />
                 )}
               </div>
             ))}
