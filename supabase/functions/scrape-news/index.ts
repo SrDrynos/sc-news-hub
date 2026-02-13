@@ -56,7 +56,7 @@ function isValidImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
   if (!/\.(jpg|jpeg|png|webp|gif|avif)/i.test(lower) && !lower.includes("/image") && !lower.includes("img")) return false;
-  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small"];
+  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder"];
   return !exclude.some((ex) => lower.includes(ex));
 }
 
@@ -75,7 +75,8 @@ async function downloadAndStoreImage(imageUrl: string, articleId: string, supaba
     const contentType = response.headers.get("content-type") || "image/jpeg";
     if (!contentType.startsWith("image/") && !contentType.includes("octet-stream")) return null;
     const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength < 500 || arrayBuffer.byteLength > 10 * 1024 * 1024) return null;
+    // Minimum 10KB to filter out logos/icons/tiny images
+    if (arrayBuffer.byteLength < 10000 || arrayBuffer.byteLength > 10 * 1024 * 1024) return null;
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const filePath = `articles/${articleId}.${ext}`;
     const { error } = await supabase.storage.from("article-images").upload(filePath, arrayBuffer, { contentType: contentType.startsWith("image/") ? contentType : "image/jpeg", upsert: true });
