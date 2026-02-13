@@ -10,7 +10,7 @@ import { useArticleBySlug, usePublishedArticles } from "@/hooks/useArticles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
-const PLACEHOLDER_IMAGE = "/images/placeholder-news.jpg";
+// No placeholder allowed — only original source images
 
 function generateSchemaOrg(article: any, url: string) {
   return {
@@ -18,7 +18,7 @@ function generateSchemaOrg(article: any, url: string) {
     "@type": "NewsArticle",
     headline: article.title,
     description: article.excerpt || "",
-    image: article.image_url || PLACEHOLDER_IMAGE,
+    image: article.image_url || undefined,
     datePublished: article.published_at,
     dateModified: article.updated_at || article.published_at,
     author: { "@type": "Organization", name: "Redação Melhor News" },
@@ -71,7 +71,7 @@ const ArticlePage = () => {
   const catSlug = (article as any).categories?.slug || "geral";
   const catName = (article as any).categories?.name || "Notícias";
   const regionName = (article as any).regions?.name;
-  const imageUrl = article.image_url || PLACEHOLDER_IMAGE;
+  const imageUrl = article.image_url || null;
   const metaDescription = (article.excerpt || article.title).substring(0, 160);
 
   // Strip HTML for plain text excerpt display
@@ -87,13 +87,13 @@ const ArticlePage = () => {
         <meta name="description" content={metaDescription} />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={metaDescription} />
-        <meta property="og:image" content={imageUrl} />
+        {imageUrl && <meta property="og:image" content={imageUrl} />}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={currentUrl} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={metaDescription} />
-        <meta name="twitter:image" content={imageUrl} />
+        {imageUrl && <meta name="twitter:image" content={imageUrl} />}
         <link rel="canonical" href={currentUrl} />
         <script type="application/ld+json">
           {JSON.stringify(generateSchemaOrg(article, currentUrl))}
@@ -143,21 +143,21 @@ const ArticlePage = () => {
             />
 
             {/* 5. Imagem (miniatura, 1 só, com crédito) */}
-            {article.image_url && (
+            {imageUrl && (
               <figure className="mb-6">
                 <img
                   src={imageUrl}
                   alt={article.title}
                   className="w-full max-h-80 object-cover rounded-lg"
                   loading="eager"
-                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE; }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
                 <figcaption className="text-xs text-muted-foreground mt-1.5 italic">
                   {(article as any).image_caption
                     ? (article as any).image_caption
                     : article.source_name
                       ? `Imagem: ${article.source_name}`
-                      : "Imagem: Reprodução"
+                      : "Imagem: Fonte original"
                   }
                 </figcaption>
               </figure>

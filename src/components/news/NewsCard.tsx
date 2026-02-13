@@ -3,7 +3,7 @@ import { Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const PLACEHOLDER_IMAGE = "/images/placeholder-news.jpg";
+// No placeholder — only original source images
 const NO_IMAGE_GRADIENT = "bg-gradient-to-br from-muted to-muted/60";
 
 export interface NewsCardArticle {
@@ -33,10 +33,10 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
   const articleUrl = `/noticia/${news.slug || news.id}`;
   const categorySlug = news.categories?.slug || "geral";
   const categoryName = news.categories?.name || "Notícias";
-  const image = news.image_url || PLACEHOLDER_IMAGE;
+  const image = news.image_url || null;
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+    (e.target as HTMLImageElement).style.display = "none";
   };
 
   if (variant === "compact") {
@@ -44,7 +44,11 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
       <Link to={articleUrl} className="group block">
         <article className="flex gap-3 py-3 border-b border-border last:border-0">
           <div className="w-20 h-20 flex-shrink-0 rounded overflow-hidden bg-muted">
-            <img src={image} alt={news.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" onError={handleImageError} />
+            {image ? (
+              <img src={image} alt={news.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" onError={handleImageError} />
+            ) : (
+              <div className={`w-full h-full ${NO_IMAGE_GRADIENT}`} />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h4>
@@ -63,7 +67,11 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
       <Link to={articleUrl} className="group block">
         <article className="news-card bg-card rounded-lg overflow-hidden shadow-sm flex gap-4">
           <div className="news-card-image w-1/3 aspect-video bg-muted">
-            <img src={image} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+            {image ? (
+              <img src={image} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+            ) : (
+              <div className={`w-full h-full ${NO_IMAGE_GRADIENT}`} />
+            )}
           </div>
           <div className="flex-1 p-4">
             <span className={`category-badge category-badge-${categorySlug} mb-2`}>{categoryName}</span>
