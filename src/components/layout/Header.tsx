@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRegions } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
+import AdSlot from "@/components/ads/AdSlot";
 
 // Ordem fixa obrigatória das cidades no menu Regional
 const REGIONAL_ORDER = [
@@ -69,7 +70,7 @@ const Header = () => {
             <span className="text-2xl md:text-3xl font-heading font-bold text-primary">Melhor News</span>
           </Link>
           <p className="hidden lg:block text-sm text-muted-foreground italic">O portal de notícias de Santa Catarina</p>
-          <div className="hidden lg:block"><div className="ad-banner w-[468px] h-[60px]"><span>Anúncio 468x60</span></div></div>
+          <div className="hidden lg:block"><AdSlot position="leaderboard_top" /></div>
           <div className="flex items-center gap-2 lg:hidden">
             <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)} aria-label="Buscar"><Search className="h-5 w-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Menu">
