@@ -73,6 +73,22 @@ Deno.serve(async (req) => {
           problems.push("image_unreachable");
         }
       }
+      // 4b. External image URL — verify it's accessible and is a real image
+      else if (article.image_url && article.image_url.startsWith("http")) {
+        try {
+          const imgRes = await fetch(article.image_url, { method: "HEAD", redirect: "follow" });
+          if (!imgRes.ok) {
+            problems.push("external_image_broken");
+          } else {
+            const contentType = imgRes.headers.get("content-type") || "";
+            if (!contentType.startsWith("image/")) {
+              problems.push("external_not_image");
+            }
+          }
+        } catch {
+          problems.push("external_image_unreachable");
+        }
+      }
 
       // 5. Title too short
       if ((article.title || "").length < 15) {
