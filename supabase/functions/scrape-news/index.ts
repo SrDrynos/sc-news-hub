@@ -394,6 +394,12 @@ async function processAndSave(
   try {
     if (!article.title || article.title.length < 10) return false;
 
+    // REGRA: Rejeitar títulos com caracteres corrompidos (encoding quebrado)
+    if (/[\uFFFD]|â€|Ã©|Ã£|Ã§|Ã¡|Ã³|Ãº|Ã­/.test(article.title)) {
+      console.warn(`Rejected "${article.title}" — corrupted characters detected`);
+      return false;
+    }
+
     // Reject articles with JSON garbage in source_name
     const sourceName = typeof article.source_name === "string" ? article.source_name : String(article.source_name || "");
     if (sourceName.includes("{") || sourceName.includes("Upgrade subscription")) {
