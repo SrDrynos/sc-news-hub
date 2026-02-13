@@ -47,8 +47,6 @@ const AnalyticsProvider = () => {
   // --- Google Analytics 4 (gtag.js) ---
   useEffect(() => {
     if (!ga4Id || !/^G-[A-Z0-9]{4,}$/i.test(ga4Id)) return;
-    // Skip GA4 standalone if GTM is already managing it
-    if (gtmId && /^GTM-[A-Z0-9]{4,}$/i.test(gtmId)) return;
 
     if (document.getElementById("ga4-script")) return;
 
