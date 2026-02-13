@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const PLACEHOLDER_IMAGE = "/images/placeholder-news.jpg";
+const NO_IMAGE_GRADIENT = "bg-gradient-to-br from-muted to-muted/60";
 
 export interface NewsCardArticle {
   id: string;
@@ -81,9 +82,20 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
   return (
     <Link to={articleUrl} className="group block">
       <article className="news-card bg-card rounded-lg overflow-hidden shadow-md h-full">
-        <div className="news-card-image aspect-video bg-muted">
-          <img src={image} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
-        </div>
+        {news.image_url ? (
+          <div className="news-card-image aspect-video bg-muted relative">
+            <img src={news.image_url} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+            {news.source_name && (
+              <span className="absolute bottom-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">
+                Imagem: {news.source_name}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className={`aspect-video ${NO_IMAGE_GRADIENT} flex items-center justify-center`}>
+            <span className="text-muted-foreground text-sm">Sem imagem</span>
+          </div>
+        )}
         <div className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className={`category-badge category-badge-${categorySlug}`}>{categoryName}</span>
