@@ -630,10 +630,22 @@ Deno.serve(async (req) => {
       return dateB - dateA;
     });
 
-    // ─── Save all collected articles ─────────────────────────────
-    console.log(`[Total] ${allArticles.length} articles collected (last 24h). Processing with AI=${enableAI}, Firecrawl=${!!firecrawlKey}...`);
+    // ─── Dedup in-memory before saving ─────────────────────────────
+    const seenTitles = new Set<string>();
+    const seenUrls = new Set<string>();
+    const dedupedArticles = allArticles.filter(({ article }) => {
+      const normTitle = article.title.toLowerCase().trim();
+      const normUrl = article.source_url?.toLowerCase().trim() || "";
+      if (seenTitles.has(normTitle) || (normUrl && seenUrls.has(normUrl))) return false;
+      seenTitles.add(normTitle);
+      if (normUrl) seenUrls.add(normUrl);
+      return true;
+    });
 
-    for (const { article, trustScore } of allArticles) {
+    // ─── Save all collected articles ─────────────────────────────
+    console.log(`[Total] ${dedupedArticles.length} unique articles (from ${allArticles.length} collected). Processing with AI=${enableAI}, Firecrawl=${!!firecrawlKey}...`);
+
+    for (const { article, trustScore } of dedupedArticles) {
       const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, autoPublish, trustScore, enableAI, firecrawlKey);
       if (saved) articlesProcessed++;
     }
