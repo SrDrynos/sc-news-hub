@@ -15,7 +15,7 @@ const Header = () => {
 
   const mainNavItems = [
     { name: "Início", path: "/" },
-    ...categories.slice(0, 7).map((cat) => ({
+    ...categories.map((cat) => ({
       name: cat.name,
       path: `/categoria/${cat.slug}`,
     })),
