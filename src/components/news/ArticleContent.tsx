@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import AdSlot from "@/components/ads/AdSlot";
 
 interface ArticleContentProps {
   content: string;
@@ -111,14 +112,10 @@ const ArticleContent = ({ content }: ArticleContentProps) => {
         <div key={index}>
           <p className="text-foreground leading-[1.85] mb-6 text-lg font-serif">{paragraph}</p>
           {index === 2 && paragraphs.length > 4 && (
-            <div className="my-8 not-prose flex justify-center">
-              <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
-            </div>
+            <AdSlot position="content_1" className="my-8" />
           )}
           {index === 6 && paragraphs.length > 8 && (
-            <div className="my-8 not-prose flex justify-center">
-              <div className="ad-banner h-[250px] w-full max-w-[336px]"><span>Anúncio 336x280</span></div>
-            </div>
+            <AdSlot position="content_2" className="my-8" />
           )}
         </div>
       ))}

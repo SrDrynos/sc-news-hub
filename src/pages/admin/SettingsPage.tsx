@@ -127,6 +127,7 @@ const SettingsPage = () => {
   const branding = (settings?.branding as any) || { logo_light_url: "", logo_dark_url: "" };
   const analytics = (settings?.analytics as any) || { ga4_id: "", gtm_id: "" };
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
+  const adSlots = (settings?.ad_slots as any) || {};
   const scoringWeights = settings?.scoring_weights;
 
   const saveBranding = async (update: Partial<typeof branding>) => {
@@ -145,6 +146,21 @@ const SettingsPage = () => {
     const newVal = { ...monetization, ...update };
     await updateSetting.mutateAsync({ key: "monetization", value: newVal });
     toast({ title: "Monetização salva!" });
+  };
+
+  const AD_POSITIONS = [
+    { key: "leaderboard_top", label: "Leaderboard Topo", defaultSize: "728x90" },
+    { key: "content_1", label: "Conteúdo (após 3º §)", defaultSize: "336x280" },
+    { key: "content_2", label: "Conteúdo (após 7º §)", defaultSize: "336x280" },
+    { key: "sidebar", label: "Sidebar", defaultSize: "300x250" },
+    { key: "below_article", label: "Abaixo da Notícia", defaultSize: "728x90" },
+  ];
+
+  const saveAdSlot = async (position: string, update: Record<string, any>) => {
+    const current = adSlots[position] || {};
+    const newSlots = { ...adSlots, [position]: { ...current, ...update } };
+    await updateSetting.mutateAsync({ key: "ad_slots", value: newSlots });
+    toast({ title: "Slot de anúncio salvo!" });
   };
 
   return (
@@ -252,6 +268,67 @@ const SettingsPage = () => {
               <p className="text-[10px] text-muted-foreground">
                 Cada linha: domínio, ID do publisher, tipo (DIRECT/RESELLER), ID da conta. Linhas com # são comentários.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ========== AD MANAGER (GPT) ========== */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Google Ad Manager (GPT)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure os blocos de anúncio do Google Ad Manager. Deixe vazio para usar a rede de testes do Google.
+            </p>
+            <div className="space-y-4">
+              {AD_POSITIONS.map(({ key, label, defaultSize }) => {
+                const slot = adSlots[key] || {};
+                return (
+                  <div key={key} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{label}</p>
+                        <p className="text-[10px] text-muted-foreground">Tamanho padrão: {defaultSize}</p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={slot.enabled !== false}
+                          onChange={(e) => saveAdSlot(key, { enabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        Ativo
+                      </label>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Caminho do bloco de anúncios</Label>
+                        <Input
+                          placeholder="/network-code/ad-unit-code"
+                          value={slot.path || ""}
+                          onChange={(e) => saveAdSlot(key, { path: e.target.value })}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tamanho [largura, altura]</Label>
+                        <Input
+                          placeholder={defaultSize}
+                          value={slot.size ? `${slot.size[0]}x${slot.size[1]}` : ""}
+                          onChange={(e) => {
+                            const parts = e.target.value.split("x").map(Number);
+                            if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
+                              saveAdSlot(key, { size: parts });
+                            }
+                          }}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

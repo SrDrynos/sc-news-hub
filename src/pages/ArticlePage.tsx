@@ -6,6 +6,7 @@ import ShareButtons from "@/components/news/ShareButtons";
 import ArticleMeta from "@/components/news/ArticleMeta";
 import RelatedArticles from "@/components/news/RelatedArticles";
 import Sidebar from "@/components/news/Sidebar";
+import AdSlot from "@/components/ads/AdSlot";
 import { useArticleBySlug, usePublishedArticles } from "@/hooks/useArticles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,9 @@ const ArticlePage = () => {
       </Helmet>
 
       <div className="container py-8">
+        {/* Leaderboard top ad */}
+        <AdSlot position="leaderboard_top" className="mb-6 hidden md:flex" />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* ═══════════ ARTIGO ═══════════ */}
           <article className="lg:col-span-2">
@@ -207,12 +211,15 @@ const ArticlePage = () => {
               </p>
             </div>
 
-            {/* 9. Compartilhamento */}
+            {/* 9. Ad below article */}
+            <AdSlot position="below_article" className="my-6 hidden md:flex" />
+
+            {/* 10. Compartilhamento */}
             <div className="py-4 border-t border-border mb-8">
               <ShareButtons url={currentUrl} title={article.title} />
             </div>
 
-            {/* 10. Notícias Relacionadas */}
+            {/* 11. Notícias Relacionadas */}
             <RelatedArticles articles={related} />
           </article>
 

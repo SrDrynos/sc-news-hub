@@ -2,15 +2,14 @@ import { Link } from "react-router-dom";
 import { TrendingUp } from "lucide-react";
 import { usePublishedArticles } from "@/hooks/useArticles";
 import NewsCard from "./NewsCard";
+import AdSlot from "@/components/ads/AdSlot";
 
 const Sidebar = () => {
   const { data: trending = [] } = usePublishedArticles(undefined, undefined, 5);
 
   return (
     <aside className="space-y-8">
-      <div className="ad-banner-sidebar hidden lg:flex">
-        <span>Anúncio 300x600</span>
-      </div>
+      <AdSlot position="sidebar" className="hidden lg:flex" />
 
       <div className="bg-card rounded-lg p-6 shadow-md">
         <div className="flex items-center gap-2 mb-6 pb-3 border-b-2 border-secondary">
@@ -37,7 +36,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <div className="ad-banner-inline"><span>Anúncio 300x250</span></div>
+      <AdSlot position="sidebar" className="" />
 
       <div className="bg-card rounded-lg p-6 shadow-md">
         <h3 className="font-heading font-bold text-lg mb-4 pb-3 border-b-2 border-secondary">Siga-nos</h3>
