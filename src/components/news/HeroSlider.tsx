@@ -103,13 +103,17 @@ const HeroSlider = () => {
           <div className="lg:col-span-2 relative group">
             <Link to={articleUrl} className="block">
               <div className="relative aspect-[16/9] md:aspect-[16/10] rounded-lg overflow-hidden bg-muted">
-                <img
-                  src={current.image_url || PLACEHOLDER_IMAGE}
-                  alt={current.title}
-                  className="w-full h-full object-cover transition-transform duration-700"
-                  loading="eager"
-                  onError={handleImageError}
-                />
+                {current.image_url ? (
+                  <img
+                    src={current.image_url}
+                    alt={current.title}
+                    className="w-full h-full object-cover transition-transform duration-700"
+                    loading="eager"
+                    onError={handleImageError}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-white">
                   <span className={`category-badge category-badge-${categorySlug} mb-2 md:mb-3`}>
@@ -125,6 +129,9 @@ const HeroSlider = () => {
                   )}
                   <div className="flex items-center gap-3 text-xs md:text-sm text-white/80">
                     {current.source_name && <span>Fonte: {current.source_name}</span>}
+                    {current.image_url && current.source_name && (
+                      <span>Imagem: {current.source_name}</span>
+                    )}
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
                       {formatDate(current.published_at)}
