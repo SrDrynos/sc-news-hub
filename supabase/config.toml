@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.audit-articles]
 verify_jwt = false
+
+[functions.rss-feed]
+verify_jwt = false
+
+[functions.partner-api]
+verify_jwt = false
