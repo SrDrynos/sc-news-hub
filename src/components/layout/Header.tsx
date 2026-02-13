@@ -6,6 +6,26 @@ import { Input } from "@/components/ui/input";
 import { useRegions } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 
+// Ordem fixa obrigatória das cidades no menu Regional
+const REGIONAL_ORDER = [
+  "Sombrio", "Araranguá", "Criciúma", "Içara", "Morro da Fumaça",
+  "Sangão", "Treze de Maio", "Jaguaruna", "Tubarão", "Laguna",
+  "Florianópolis", "Balneário Camboriú",
+];
+
+function sortRegions(regions: any[]): any[] {
+  const ordered: any[] = [];
+  for (const name of REGIONAL_ORDER) {
+    const found = regions.find((r) => r.name === name);
+    if (found) ordered.push(found);
+  }
+  // Append remaining cities after the fixed list
+  for (const r of regions) {
+    if (!REGIONAL_ORDER.includes(r.name)) ordered.push(r);
+  }
+  return ordered;
+}
+
 // MENU OFICIAL FIXO – 8 itens, ordem obrigatória
 const MENU_ITEMS = [
   { label: "Início", to: "/" },
@@ -82,7 +102,7 @@ const Header = () => {
                             Todas as Cidades
                           </Link>
                         </li>
-                        {(regions as any[]).map((r) => (
+                        {sortRegions(regions as any[]).map((r) => (
                           <li key={r.id}>
                             <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                               {r.name}
@@ -134,7 +154,7 @@ const Header = () => {
                                 Todas as Cidades
                               </Link>
                             </li>
-                            {(regions as any[]).map((r) => (
+                            {sortRegions(regions as any[]).map((r) => (
                               <li key={r.id}>
                                 <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>
                                   {r.name}
