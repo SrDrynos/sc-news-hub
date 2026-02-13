@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRegions } from "@/hooks/useArticles";
+import { useRegions, useSystemSettings } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 import AdSlot from "@/components/ads/AdSlot";
 
@@ -42,9 +42,13 @@ const MENU_ITEMS = [
 const Header = () => {
   const { isStaff } = useAuth();
   const { data: regions = [] } = useRegions();
+  const { data: settings } = useSystemSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isRegionalOpen, setIsRegionalOpen] = useState(false);
+
+  const branding = (settings?.branding as any) || {};
+  const logoUrl = branding.logo_light_url;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card shadow-md">
@@ -67,7 +71,11 @@ const Header = () => {
       <div className="container py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl md:text-3xl font-heading font-bold text-primary">Melhor News</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Melhor News" className="h-10 md:h-12 object-contain" />
+            ) : (
+              <span className="text-2xl md:text-3xl font-heading font-bold text-primary">Melhor News</span>
+            )}
           </Link>
           <p className="hidden lg:block text-sm text-muted-foreground italic">O portal de notícias de Santa Catarina</p>
           <div className="hidden lg:block"><AdSlot position="leaderboard_top" /></div>
