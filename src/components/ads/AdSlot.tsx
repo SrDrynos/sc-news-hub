@@ -63,12 +63,13 @@ const AdSlot = ({ position, className = "" }: AdSlotProps) => {
         style={{
           display: "inline-block",
           width: `${width}px`,
+          maxWidth: "100%",
           height: `${height}px`,
         }}
         data-ad-client={publisherId}
         data-ad-slot={adSlotId || undefined}
         data-ad-format={adSlotId ? undefined : "auto"}
-        data-full-width-responsive={adSlotId ? undefined : "true"}
+        data-full-width-responsive="true"
       />
     </div>
   );
