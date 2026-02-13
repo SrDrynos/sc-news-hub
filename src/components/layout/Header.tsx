@@ -97,11 +97,6 @@ const Header = () => {
                         <ChevronDown className="h-3.5 w-3.5" />
                       </Link>
                       <ul className="absolute left-0 top-full min-w-[220px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[400px] overflow-y-auto">
-                        <li>
-                          <Link to={item.to} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors font-medium">
-                            Todas as Cidades
-                          </Link>
-                        </li>
                         {sortRegions(regions as any[]).map((r) => (
                           <li key={r.id}>
                             <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
@@ -149,11 +144,6 @@ const Header = () => {
                         </button>
                         {isRegionalOpen && (
                           <ul className="ml-4 space-y-1">
-                            <li>
-                              <Link to={item.to} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm font-medium" onClick={() => setIsMenuOpen(false)}>
-                                Todas as Cidades
-                              </Link>
-                            </li>
                             {sortRegions(regions as any[]).map((r) => (
                               <li key={r.id}>
                                 <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>
