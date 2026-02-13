@@ -19,6 +19,13 @@ const Index = () => {
 
       <HeroSlider />
 
+      {/* Ad after hero */}
+      <div className="bg-muted py-4">
+        <div className="container">
+          <AdSlot position="after_hero" className="hidden md:flex" />
+        </div>
+      </div>
+
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -28,8 +35,14 @@ const Index = () => {
                 {index === 1 && (
                   <AdSlot position="content_1" className="my-8" />
                 )}
-                {index === 4 && (
+                {index === 3 && (
                   <AdSlot position="content_2" className="my-8" />
+                )}
+                {index === 5 && (
+                  <AdSlot position="content_3" className="my-8" />
+                )}
+                {index === 7 && (
+                  <AdSlot position="content_4" className="my-8" />
                 )}
               </div>
             ))}
@@ -44,6 +57,13 @@ const Index = () => {
             )}
           </div>
           <div className="lg:col-span-1"><Sidebar /></div>
+        </div>
+      </div>
+
+      {/* Ad before newsletter */}
+      <div className="bg-muted py-4">
+        <div className="container">
+          <AdSlot position="before_newsletter" className="hidden md:flex" />
         </div>
       </div>
 
