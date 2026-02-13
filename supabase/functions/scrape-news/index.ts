@@ -164,8 +164,19 @@ function cleanTitle(title: string): string {
   return t;
 }
 
-// ─── AI Summary Generator (APENAS resumo 80-300 palavras) ────────
-async function generateSummaryWithAI(article: ExtractedArticle): Promise<{ excerpt: string; meta_description: string } | null> {
+// ─── AI Summary + Classification Generator ────────────────────────
+interface AIResult {
+  excerpt: string;
+  meta_description: string;
+  category: string | null;
+  city: string | null;
+}
+
+async function generateSummaryWithAI(
+  article: ExtractedArticle,
+  categoryNames: string[],
+  cityNames: string[],
+): Promise<AIResult | null> {
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!lovableApiKey) {
     console.warn("[AI] LOVABLE_API_KEY not configured, skipping summary");
@@ -174,30 +185,34 @@ async function generateSummaryWithAI(article: ExtractedArticle): Promise<{ excer
 
   try {
     const prompt = `Você é redator do portal "Melhor News", um AGREGADOR de notícias de Santa Catarina.
-O Melhor News NÃO produz matérias jornalísticas. Ele publica APENAS RESUMOS INFORMATIVOS curtos que direcionam o leitor para a fonte original.
 
 REGRAS OBRIGATÓRIAS:
-1. Gere APENAS um resumo informativo de 80 a 150 palavras (MÁXIMO ABSOLUTO: 300 palavras)
-2. Texto em 1-2 parágrafos simples, SEM subtítulos (H2, H3), SEM conclusão, SEM opinião
-3. Linguagem neutra, descritiva, factual — como uma sinopse
-4. NÃO use linguagem de autoria ("segundo apuração", "conforme levantamento")
-5. NÃO invente informações que não estão na fonte original
-6. NÃO inclua links no texto
-7. Identifique a cidade de origem se mencionada na notícia
-8. NÃO crie aparência de matéria jornalística completa
-9. NUNCA copie o texto integral da fonte — apenas resuma os pontos principais
+1. Gere um resumo informativo de 80 a 150 palavras (MÁXIMO: 300 palavras)
+2. Texto em 1-2 parágrafos simples, SEM subtítulos, SEM conclusão, SEM opinião
+3. Linguagem neutra, descritiva, factual
+4. NÃO invente informações. NÃO inclua links. NUNCA copie o texto integral.
+5. Classifique a CATEGORIA e identifique a CIDADE principal da notícia.
+
+CATEGORIAS DISPONÍVEIS (escolha UMA ou null):
+${categoryNames.join(", ")}
+
+CIDADES COBERTAS (escolha UMA ou null):
+${cityNames.join(", ")}
 
 DADOS DA NOTÍCIA:
 TÍTULO: ${article.title}
 FONTE: ${article.source_name}
+URL: ${article.source_url}
 DESCRIÇÃO: ${article.subtitle}
-CONTEÚDO DISPONÍVEL:
-${article.content.substring(0, 2000)}
+CONTEÚDO:
+${article.content.substring(0, 2500)}
 
 Responda APENAS com JSON válido:
 {
-  "excerpt": "Resumo informativo de 80-150 palavras, descritivo e factual.",
-  "meta_description": "Meta description SEO de 150-160 caracteres"
+  "excerpt": "Resumo informativo de 80-150 palavras",
+  "meta_description": "Meta description SEO de 150-160 caracteres",
+  "category": "Nome exato da categoria ou null se nenhuma se aplica",
+  "city": "Nome exato da cidade ou null se não identificada"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -209,7 +224,7 @@ Responda APENAS com JSON válido:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você gera APENAS resumos curtos (80-150 palavras) em JSON válido. NUNCA produza matérias longas. NUNCA copie o conteúdo integral." },
+          { role: "system", content: "Você gera resumos curtos em JSON válido e classifica categorias/cidades com precisão. NUNCA invente dados." },
           { role: "user", content: prompt },
         ],
       }),
@@ -235,22 +250,24 @@ Responda APENAS com JSON válido:
       return null;
     }
 
-    // Validate word count: 80-300
     const wordCount = parsed.excerpt.replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
     if (wordCount < 80) {
       console.warn(`[AI] Summary only ${wordCount} words for "${article.title}" (min 80)`);
       return null;
     }
     if (wordCount > 300) {
-      // Truncate to 300 words
-      const words = parsed.excerpt.split(/\s+/);
-      parsed.excerpt = words.slice(0, 300).join(" ");
+      parsed.excerpt = parsed.excerpt.split(/\s+/).slice(0, 300).join(" ");
     }
 
-    console.log(`[AI] ✓ Summary for "${article.title}" (${wordCount} words)`);
-    return parsed;
+    console.log(`[AI] ✓ "${article.title}" → ${parsed.city || "?"} / ${parsed.category || "?"} (${wordCount}w)`);
+    return {
+      excerpt: parsed.excerpt,
+      meta_description: parsed.meta_description || "",
+      category: parsed.category || null,
+      city: parsed.city || null,
+    };
   } catch (err) {
-    console.error(`[AI] Error generating summary for "${article.title}":`, err);
+    console.error(`[AI] Error for "${article.title}":`, err);
     return null;
   }
 }
@@ -432,26 +449,84 @@ async function processAndSave(
 
     const articleId = crypto.randomUUID();
 
-    // Download and store image (optional)
+    // ─── Image: try RSS image first, then Firecrawl page scrape ──
     let storedImageUrl: string | null = null;
-    if (article.image_url) {
+    if (article.image_url && isValidImageUrl(article.image_url)) {
       storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
+    }
+    // If no image from RSS, try extracting from source page via Firecrawl
+    if (!storedImageUrl && firecrawlKey && article.source_url) {
+      try {
+        const imgRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ url: article.source_url, formats: ["html"], onlyMainContent: true }),
+        });
+        if (imgRes.ok) {
+          const imgData = await imgRes.json();
+          const html = imgData.data?.html || imgData.html || "";
+          // Extract first large image from HTML
+          const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+          for (const m of imgMatches) {
+            const src = m[1];
+            if (isValidImageUrl(src) && !src.includes("data:image")) {
+              const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
+              storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
+              if (storedImageUrl) {
+                console.log(`[Image] ✓ Firecrawl extracted image for "${article.title}"`);
+                break;
+              }
+            }
+          }
+        }
+      } catch (imgErr) {
+        console.warn(`[Image] Firecrawl image extraction failed for "${article.title}"`);
+      }
     }
     if (!storedImageUrl) {
       storedImageUrl = `${supabaseUrl}/storage/v1/object/public/article-images/placeholder-news.jpg`;
     }
 
-    // ─── REGRA 5: Gerar APENAS resumo (80-300 palavras) ──────────
+    // ─── AI: Generate summary + classify category & city ─────────
+    const categoryNames = categories.map((c: any) => c.name);
+    const cityNames = regions.map((r: any) => r.name);
+    
     let excerpt = article.subtitle;
     let metaDescription: string | null = null;
+    let aiCategoryId: string | null = null;
+    let aiRegionId: string | null = null;
 
     if (enableAI) {
-      const summary = await generateSummaryWithAI(article);
-      if (summary) {
-        excerpt = summary.excerpt;
-        metaDescription = summary.meta_description;
+      const aiResult = await generateSummaryWithAI(article, categoryNames, cityNames);
+      if (aiResult) {
+        excerpt = aiResult.excerpt;
+        metaDescription = aiResult.meta_description;
+        
+        // Map AI category name to ID
+        if (aiResult.category) {
+          const aiCat = aiResult.category.toLowerCase().trim();
+          const catMatch = categories.find((c: any) => 
+            c.name && c.name.toLowerCase() === aiCat
+          );
+          if (catMatch) aiCategoryId = catMatch.id;
+          else console.warn(`[AI] Unknown category "${aiResult.category}" — falling back to keywords`);
+        }
+        
+        // Map AI city name to region ID
+        if (aiResult.city) {
+          const aiCity = aiResult.city.toLowerCase().trim();
+          const regMatch = regions.find((r: any) => 
+            r.name && r.name.toLowerCase() === aiCity
+          );
+          if (regMatch) aiRegionId = regMatch.id;
+          else console.warn(`[AI] Unknown city "${aiResult.city}" — falling back to keywords`);
+        }
       }
     }
+
+    // Fallback to keyword classification if AI didn't classify
+    const categoryId = aiCategoryId || classifyCategory(fullText, categories);
+    const regionId = aiRegionId || classifyRegion(fullText, regions);
 
     // Fallback excerpt if AI fails
     if (!excerpt || excerpt.length < 50) {
@@ -468,9 +543,6 @@ async function processAndSave(
       if (plainExcerpt.length > 157) metaDescription += "...";
     }
 
-    const categoryId = classifyCategory(fullText, categories);
-    const regionId = classifyRegion(fullText, regions);
-
     // Auto-publish based on trust score
     let status = "recycled";
     let publishedAt: string | null = null;
@@ -484,7 +556,7 @@ async function processAndSave(
       id: articleId,
       title: article.title,
       excerpt,
-      content: excerpt, // Página de redirecionamento: conteúdo = resumo
+      content: excerpt,
       image_url: storedImageUrl,
       image_caption: `Foto: ${article.source_name}`,
       meta_description: metaDescription,
