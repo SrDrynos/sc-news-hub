@@ -8,16 +8,20 @@ declare global {
 }
 
 export interface AdSlotProps {
-  position: "leaderboard_top" | "content_1" | "content_2" | "sidebar" | "below_article";
+  position: string;
   className?: string;
 }
 
-const DEFAULT_SIZES: Record<string, { width: number; height: number; format?: string }> = {
+const DEFAULT_SIZES: Record<string, { width: number; height: number }> = {
   leaderboard_top: { width: 728, height: 90 },
+  after_hero: { width: 728, height: 90 },
   content_1: { width: 336, height: 280 },
   content_2: { width: 336, height: 280 },
+  content_3: { width: 336, height: 280 },
+  content_4: { width: 728, height: 90 },
   sidebar: { width: 300, height: 250 },
   below_article: { width: 728, height: 90 },
+  before_newsletter: { width: 728, height: 90 },
 };
 
 const AdSlot = ({ position, className = "" }: AdSlotProps) => {
