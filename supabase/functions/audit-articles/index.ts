@@ -54,34 +54,23 @@ Deno.serve(async (req) => {
       // 4. If image_url points to storage, verify the file actually exists and is large enough
       if (article.image_url && article.image_url.includes("/storage/v1/object/public/article-images/")) {
         try {
-          const imgRes = await fetch(article.image_url, { method: "HEAD" });
+          const imgRes = await fetch(article.image_url);
           if (!imgRes.ok) {
             problems.push("image_404");
           } else {
-            const contentLength = parseInt(imgRes.headers.get("content-length") || "0", 10);
-            // Images under 10KB are likely logos/icons/broken
-            if (contentLength > 0 && contentLength < 10000) {
-              problems.push("image_too_small");
-            }
-            // Check content type
             const contentType = imgRes.headers.get("content-type") || "";
             if (!contentType.startsWith("image/")) {
               problems.push("not_an_image");
+            } else {
+              const arrayBuffer = await imgRes.arrayBuffer();
+              // Images under 15KB are likely logos/icons/broken
+              if (arrayBuffer.byteLength < 15000) {
+                problems.push("image_too_small");
+              }
             }
           }
         } catch {
           problems.push("image_unreachable");
-        }
-      }
-      // 4b. Also check if image_url is accessible at all (any URL)
-      else if (article.image_url && !article.image_url.includes("/storage/v1/object/public/article-images/")) {
-        try {
-          const imgRes = await fetch(article.image_url, { method: "HEAD", redirect: "follow" });
-          if (!imgRes.ok) {
-            problems.push("external_image_broken");
-          }
-        } catch {
-          problems.push("external_image_unreachable");
         }
       }
 
