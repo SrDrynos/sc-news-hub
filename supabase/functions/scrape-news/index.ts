@@ -230,28 +230,27 @@ async function rewriteWithAI(article: ExtractedArticle): Promise<{ content: stri
   }
 
   try {
-    const prompt = `Você é um jornalista profissional do portal "Melhor News SC". Reescreva a notícia abaixo em um artigo completo, original, em português brasileiro, com linguagem jornalística rigorosa.
+    const prompt = `Você é redator do portal "Melhor News", um AGREGADOR de notícias. O Melhor News NÃO produz matérias jornalísticas. Ele publica apenas RESUMOS INFORMATIVOS curtos que direcionam o leitor para a fonte original.
 
 REGRAS OBRIGATÓRIAS:
-1. O artigo deve ter entre 1000 e 1200 palavras
-2. Use HTML pronto para WordPress com tags <h2>, <h3>, <p>
-3. Estrutura: Introdução (2-3 parágrafos) → Desenvolvimento com subtítulos (<h2>) → Conclusão
-4. Linguagem formal, clara, sem erros de ortografia ou concordância
-5. NÃO inclua links externos no corpo do texto
-6. NÃO invente informações que não estão na fonte original
-7. NÃO repita o título no corpo do texto
-8. Crédito editorial: "Redação Melhor News"
-9. Foco estritamente na notícia; não inclua especulações
+1. Gere APENAS um resumo informativo de 80 a 150 palavras (máximo absoluto: 300 palavras)
+2. Texto em 1-2 parágrafos simples, SEM subtítulos (H2, H3), SEM conclusão, SEM opinião
+3. Linguagem neutra, descritiva, factual — como uma sinopse
+4. NÃO use linguagem de autoria ("segundo apuração", "conforme levantamento")
+5. NÃO invente informações que não estão na fonte original
+6. NÃO inclua links no texto
+7. Identifique a cidade de origem se mencionada na notícia
+8. NÃO crie aparência de matéria jornalística completa
 
 TÍTULO: ${article.title}
 SUBTÍTULO: ${article.subtitle}
 CONTEÚDO ORIGINAL:
-${article.content.substring(0, 3000)}
+${article.content.substring(0, 2000)}
 
 Responda APENAS com um JSON válido no formato:
 {
-  "content": "<p>Introdução...</p><h2>Subtítulo 1</h2><p>Desenvolvimento...</p>...<p>Conclusão...</p>",
-  "excerpt": "Descrição jornalística da notícia com até 500 palavras, otimizada para SEO, incluindo palavras-chave relevantes e contexto completo do fato noticioso. Deve funcionar como um resumo expandido que capture a essência da notícia.",
+  "content": "",
+  "excerpt": "Resumo informativo de 80-150 palavras, descritivo e factual, sem opinião, sem subtítulos.",
   "meta_description": "Meta description SEO de 150-160 caracteres com palavra-chave principal"
 }`;
 
@@ -264,7 +263,7 @@ Responda APENAS com um JSON válido no formato:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você é um jornalista profissional que reescreve notícias para o portal Melhor News SC. Responda APENAS com JSON válido, sem markdown code blocks." },
+          { role: "system", content: "Você é redator do portal Melhor News, um agregador de notícias. Gere APENAS resumos curtos (80-150 palavras) em JSON válido, sem markdown code blocks. NUNCA produza matérias longas." },
           { role: "user", content: prompt },
         ],
       }),
@@ -286,8 +285,8 @@ Responda APENAS com um JSON válido no formato:
     }
 
     const parsed = JSON.parse(jsonStr);
-    if (!parsed.content || parsed.content.length < 500) {
-      console.warn(`[AI] Rewrite too short for "${article.title}"`);
+    if (!parsed.excerpt || parsed.excerpt.length < 50) {
+      console.warn(`[AI] Summary too short for "${article.title}"`);
       return null;
     }
 

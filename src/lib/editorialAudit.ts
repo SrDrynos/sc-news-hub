@@ -82,22 +82,13 @@ export function auditArticle(article: {
     errors.push({ rule: 3, message: "URL da fonte original é obrigatória." });
   }
 
-  // REGRA 4 – Subtítulo máx. 100 palavras
+  // REGRA 4 – Subtítulo máx. 300 palavras (resumo informativo)
   const excerptWords = countWords(article.excerpt || "");
-  if (excerptWords > 100) {
-    errors.push({ rule: 4, message: `Subtítulo tem ${excerptWords} palavras (máx. 100).` });
+  if (excerptWords > 300) {
+    errors.push({ rule: 4, message: `Resumo tem ${excerptWords} palavras (máx. 300).` });
   }
 
-  // REGRA 5 – Corpo: 150–300 palavras
-  const bodyWords = countWords(article.content || "");
-  if (article.content?.trim()) {
-    if (bodyWords < 150) {
-      errors.push({ rule: 5, message: `Corpo tem ${bodyWords} palavras (mín. 150).` });
-    }
-    if (bodyWords > 300) {
-      errors.push({ rule: 5, message: `Corpo tem ${bodyWords} palavras (máx. 300).` });
-    }
-  }
+  // REGRA 5 – Corpo não obrigatório (modelo agregador — resumo no excerpt)
 
   // REGRA 6 – Cidade (região) obrigatória — deve vir antes da categoria
   if (!article.region_id) {
