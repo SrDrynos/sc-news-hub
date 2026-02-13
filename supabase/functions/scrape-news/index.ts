@@ -55,9 +55,30 @@ function cleanContent(markdown: string): string {
 function isValidImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
-  if (!/\.(jpg|jpeg|png|webp|gif|avif)/i.test(lower) && !lower.includes("/image") && !lower.includes("img")) return false;
-  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder"];
-  return !exclude.some((ex) => lower.includes(ex));
+  // Must be http(s) URL
+  if (!lower.startsWith("http")) return false;
+  // Exclude known non-article images
+  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.", "transparent.", "spinner", "loading"];
+  if (exclude.some((ex) => lower.includes(ex))) return false;
+  // Accept URLs with image extensions
+  if (/\.(jpg|jpeg|png|webp|gif|avif|bmp|svg)/i.test(lower)) return true;
+  // Accept URLs containing common image path patterns  
+  if (/\/(image|img|foto|photo|media|upload|wp-content\/upload|cdn|assets|thumb|pic)/i.test(lower)) return true;
+  // Accept URLs from known image CDNs
+  if (/cloudinary|imgix|cloudfront|akamai|fastly|cdn\.|wp\.com|ggpht|googleusercontent|s3\.amazonaws/i.test(lower)) return true;
+  // Accept if URL has image-related query params
+  if (/[?&](w|width|h|height|size|resize|format|quality)=/i.test(lower)) return true;
+  // For og:image and similar metadata-provided URLs, accept anything that's HTTP
+  return false;
+}
+
+// Less strict version for metadata-provided URLs (og:image, etc.)
+function isValidMetadataImageUrl(url: string): boolean {
+  if (!url || url.length < 10) return false;
+  const lower = url.toLowerCase();
+  if (!lower.startsWith("http")) return false;
+  const hardExclude = ["favicon", "1x1", "spacer", "blank.", "transparent.", "spinner", "pixel"];
+  return !hardExclude.some((ex) => lower.includes(ex));
 }
 
 // ─── Image Storage ───────────────────────────────────────────────
@@ -460,30 +481,62 @@ async function processAndSave(
 
     // ─── Image: try RSS image first, then Firecrawl page scrape ──
     let storedImageUrl: string | null = null;
+    
+    // 1. Try RSS-provided image URL
     if (article.image_url && isValidImageUrl(article.image_url)) {
       storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
+      if (storedImageUrl) console.log(`[Image] ✓ RSS image for "${article.title}"`);
     }
-    // If no image from RSS, try extracting from source page via Firecrawl
+    
+    // 2. If no image from RSS, try Firecrawl with metadata (og:image is most reliable)
     if (!storedImageUrl && firecrawlKey && article.source_url) {
       try {
         const imgRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
           headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ url: article.source_url, formats: ["html"], onlyMainContent: true }),
+          body: JSON.stringify({ url: article.source_url, formats: ["html"], onlyMainContent: false }),
         });
         if (imgRes.ok) {
           const imgData = await imgRes.json();
+          const metadata = imgData.data?.metadata || imgData.metadata || {};
           const html = imgData.data?.html || imgData.html || "";
-          // Extract first large image from HTML
-          const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
-          for (const m of imgMatches) {
-            const src = m[1];
-            if (isValidImageUrl(src) && !src.includes("data:image")) {
-              const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
-              storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
-              if (storedImageUrl) {
-                console.log(`[Image] ✓ Firecrawl extracted image for "${article.title}"`);
-                break;
+          
+          // Priority 1: og:image from metadata (most reliable for article images)
+          const ogImage = metadata.ogImage || metadata["og:image"] || metadata.image || metadata.twitterImage || metadata["twitter:image"];
+          if (ogImage && isValidMetadataImageUrl(ogImage)) {
+            const absOg = ogImage.startsWith("http") ? ogImage : new URL(ogImage, article.source_url).href;
+            storedImageUrl = await downloadAndStoreImage(absOg, articleId, supabase, supabaseUrl);
+            if (storedImageUrl) console.log(`[Image] ✓ og:image for "${article.title}"`);
+          }
+          
+          // Priority 2: First valid <img> in HTML
+          if (!storedImageUrl) {
+            const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+            for (const m of imgMatches) {
+              const src = m[1];
+              if (!src.includes("data:image") && isValidImageUrl(src)) {
+                const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
+                storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
+                if (storedImageUrl) {
+                  console.log(`[Image] ✓ HTML img for "${article.title}"`);
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Priority 3: Try any img even with relaxed validation
+          if (!storedImageUrl) {
+            const allImgs = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+            for (const m of allImgs) {
+              const src = m[1];
+              if (!src.includes("data:image") && isValidMetadataImageUrl(src)) {
+                const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
+                storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
+                if (storedImageUrl) {
+                  console.log(`[Image] ✓ Relaxed img for "${article.title}"`);
+                  break;
+                }
               }
             }
           }
@@ -702,14 +755,20 @@ Deno.serve(async (req) => {
               const title = cleanTitle(metadata.title || "");
               if (!title || title.length < 15) continue;
 
-              // Extract first valid image from HTML
+              // Extract image: Priority 1 = og:image, Priority 2 = HTML img tags
               let imageUrl: string | null = null;
-              const imgMatches = artHtml.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
-              for (const m of imgMatches) {
-                const imgSrc = m[1];
-                if (isValidImageUrl(imgSrc) && !imgSrc.includes("data:image")) {
-                  imageUrl = imgSrc.startsWith("http") ? imgSrc : new URL(imgSrc, articleUrl).href;
-                  break;
+              const ogImage = metadata.ogImage || metadata["og:image"] || metadata.image || metadata.twitterImage || metadata["twitter:image"];
+              if (ogImage && isValidMetadataImageUrl(ogImage)) {
+                imageUrl = ogImage.startsWith("http") ? ogImage : new URL(ogImage, articleUrl).href;
+              }
+              if (!imageUrl) {
+                const imgMatches = artHtml.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+                for (const m of imgMatches) {
+                  const imgSrc = m[1];
+                  if (!imgSrc.includes("data:image") && isValidImageUrl(imgSrc)) {
+                    imageUrl = imgSrc.startsWith("http") ? imgSrc : new URL(imgSrc, articleUrl).href;
+                    break;
+                  }
                 }
               }
 
