@@ -545,8 +545,9 @@ async function processAndSave(
         console.warn(`[Image] Firecrawl image extraction failed for "${article.title}"`);
       }
     }
+    // REGRA OBRIGATÓRIA: Sem imagem original = reciclagem
     if (!storedImageUrl) {
-      console.log(`[Image] No image found for "${article.title}" — publishing without image`);
+      console.warn(`[Image] ✗ No image for "${article.title}" — sending to recycled`);
     }
 
     // ─── AI: Generate summary + classify category & city ─────────
@@ -609,12 +610,14 @@ async function processAndSave(
       if (plainExcerpt.length > 157) metaDescription += "...";
     }
 
-    // Auto-publish based on trust score
+    // Auto-publish based on trust score — BUT only if has image
     let status = "recycled";
     let publishedAt: string | null = null;
-    if (autoPublish.enabled && trustScore >= (autoPublish.min_score || 7)) {
+    if (storedImageUrl && autoPublish.enabled && trustScore >= (autoPublish.min_score || 7)) {
       status = "published";
       publishedAt = new Date().toISOString();
+    } else if (!storedImageUrl) {
+      status = "recycled"; // Sem imagem = reciclagem obrigatória
     }
 
     // REGRA 7: NUNCA copiar matéria completa — content = resumo apenas
