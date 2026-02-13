@@ -8,8 +8,10 @@ import { useSystemSettings } from "@/hooks/useArticles";
 const AnalyticsProvider = () => {
   const { data: settings } = useSystemSettings();
   const analytics = (settings?.analytics as any) || {};
+  const monetization = (settings?.monetization as any) || {};
   const gtmId = analytics.gtm_id?.trim() || "";
   const ga4Id = analytics.ga4_id?.trim() || "";
+  const adsensePubId = monetization.adsense_publisher_id?.trim() || "";
 
   // --- Google Tag Manager ---
   useEffect(() => {
@@ -71,6 +73,25 @@ const AnalyticsProvider = () => {
       document.getElementById("ga4-config")?.remove();
     };
   }, [ga4Id, gtmId]);
+
+  // --- Google AdSense ---
+  useEffect(() => {
+    if (!adsensePubId || !/^(ca-)?pub-\d{10,}$/i.test(adsensePubId)) return;
+    if (document.getElementById("adsense-script")) return;
+
+    const pubId = adsensePubId.startsWith("ca-") ? adsensePubId : `ca-${adsensePubId}`;
+
+    const script = document.createElement("script");
+    script.id = "adsense-script";
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${pubId}`;
+    document.head.appendChild(script);
+
+    return () => {
+      document.getElementById("adsense-script")?.remove();
+    };
+  }, [adsensePubId]);
 
   return null;
 };
