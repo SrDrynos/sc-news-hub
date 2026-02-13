@@ -3,7 +3,7 @@ import { useSystemSettings } from "@/hooks/useArticles";
 
 declare global {
   interface Window {
-    googletag: any;
+    adsbygoogle: any[];
   }
 }
 
@@ -12,78 +12,59 @@ export interface AdSlotProps {
   className?: string;
 }
 
-const DEFAULT_SLOTS: Record<string, { path: string; size: [number, number] }> = {
-  leaderboard_top: { path: "/6355419/Travel/Europe", size: [728, 90] },
-  content_1: { path: "/6355419/Travel/Europe/France", size: [336, 280] },
-  content_2: { path: "/6355419/Travel/Europe/France/Paris", size: [336, 280] },
-  sidebar: { path: "/6355419/Travel", size: [300, 250] },
-  below_article: { path: "/6355419/Travel/Europe", size: [728, 90] },
+const DEFAULT_SIZES: Record<string, { width: number; height: number; format?: string }> = {
+  leaderboard_top: { width: 728, height: 90 },
+  content_1: { width: 336, height: 280 },
+  content_2: { width: 336, height: 280 },
+  sidebar: { width: 300, height: 250 },
+  below_article: { width: 728, height: 90 },
 };
 
-let gptLoaded = false;
-
-function ensureGptLoaded() {
-  if (gptLoaded) return;
-  gptLoaded = true;
-  window.googletag = window.googletag || { cmd: [] };
-  const script = document.createElement("script");
-  script.src = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
-  script.async = true;
-  script.crossOrigin = "anonymous";
-  document.head.appendChild(script);
-}
-
 const AdSlot = ({ position, className = "" }: AdSlotProps) => {
-  const divId = `gpt-ad-${position}`;
-  const slotRef = useRef<any>(null);
+  const pushed = useRef(false);
   const { data: settings } = useSystemSettings();
 
   const adSlots = (settings?.ad_slots as any) || {};
-  const slotConfig = adSlots[position] || DEFAULT_SLOTS[position];
-  const isDisabled = adSlots[position]?.enabled === false;
-  const adPath = slotConfig?.path || DEFAULT_SLOTS[position]?.path;
-  const adSize: [number, number] | undefined = slotConfig?.size || DEFAULT_SLOTS[position]?.size;
+  const slotConfig = adSlots[position];
+  const isDisabled = slotConfig?.enabled === false;
+
+  const monetization = (settings?.monetization as any) || {};
+  const publisherId = monetization.adsense_publisher_id || "ca-pub-1026797533966602";
+
+  const sizeConfig = DEFAULT_SIZES[position];
+  const width = slotConfig?.size?.[0] || sizeConfig?.width;
+  const height = slotConfig?.size?.[1] || sizeConfig?.height;
+
+  // Use the ad slot ID if configured in admin, otherwise use "auto"
+  const adSlotId = slotConfig?.ad_slot_id || "";
 
   useEffect(() => {
-    if (isDisabled || !adPath || !adSize) return;
+    if (isDisabled || pushed.current) return;
 
-    ensureGptLoaded();
-    window.googletag = window.googletag || { cmd: [] };
+    try {
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adsbygoogle.push({});
+      pushed.current = true;
+    } catch (e) {
+      console.warn("AdSense push error:", e);
+    }
+  }, [isDisabled]);
 
-    window.googletag.cmd.push(() => {
-      if (slotRef.current) {
-        window.googletag.destroySlots([slotRef.current]);
-        slotRef.current = null;
-      }
-
-      const slot = window.googletag
-        .defineSlot(adPath, adSize, divId)
-        ?.addService(window.googletag.pubads());
-
-      if (slot) {
-        slotRef.current = slot;
-        window.googletag.enableServices();
-        window.googletag.display(divId);
-      }
-    });
-
-    return () => {
-      if (slotRef.current) {
-        window.googletag.cmd.push(() => {
-          window.googletag.destroySlots([slotRef.current]);
-          slotRef.current = null;
-        });
-      }
-    };
-  }, [isDisabled, adPath, adSize?.[0], adSize?.[1], divId]);
-
-  if (isDisabled || !adPath || !adSize) return null;
+  if (isDisabled) return null;
 
   return (
     <div className={`flex justify-center not-prose ${className}`}>
-      <div
-        id={divId}
-        style={{ width: adSize[0], height: adSize[1], minWidth: adSize[0], minHeight: adSize[1] }}
+      <ins
+        className="adsbygoogle"
+        style={{
+          display: "inline-block",
+          width: `${width}px`,
+          height: `${height}px`,
+        }}
+        data-ad-client={publisherId}
+        data-ad-slot={adSlotId || undefined}
+        data-ad-format={adSlotId ? undefined : "auto"}
+        data-full-width-responsive={adSlotId ? undefined : "true"}
       />
     </div>
   );
