@@ -167,7 +167,7 @@ const ArticlePage = () => {
               </figure>
             )}
 
-            {/* 6. Resumo curto (máx. 300 palavras — NÃO é matéria) */}
+            {/* 6. Resumo curto */}
             {plainExcerpt && (
               <div className="mb-6">
                 <p className="text-base text-foreground leading-relaxed">
@@ -175,6 +175,9 @@ const ArticlePage = () => {
                 </p>
               </div>
             )}
+
+            {/* Ad between content */}
+            <AdSlot position="content_1" className="my-6" />
 
             {/* 7. Fonte OBRIGATÓRIA + Link DESTACADO */}
             <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-5 mb-6">
