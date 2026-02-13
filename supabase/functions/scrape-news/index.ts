@@ -394,9 +394,12 @@ async function processAndSave(
     if (!article.title || article.title.length < 10) return false;
 
     // Reject articles with JSON garbage in source_name
-    if (article.source_name && (article.source_name.includes("{") || article.source_name.includes("Upgrade subscription"))) {
+    const sourceName = typeof article.source_name === "string" ? article.source_name : String(article.source_name || "");
+    if (sourceName.includes("{") || sourceName.includes("Upgrade subscription")) {
       console.warn(`Rejected "${article.title}" - invalid source_name`);
       return false;
+    }
+    article.source_name = sourceName;
     }
 
     // REGRA: Check if article is about SC region (target cities OR generic SC mentions)
@@ -502,22 +505,26 @@ async function processAndSave(
         excerpt = aiResult.excerpt;
         metaDescription = aiResult.meta_description;
         
-        // Map AI category name to ID
+        // Map AI category name to ID (fuzzy match)
         if (aiResult.category) {
-          const aiCat = aiResult.category.toLowerCase().trim();
-          const catMatch = categories.find((c: any) => 
-            c.name && c.name.toLowerCase() === aiCat
-          );
+          const aiCat = aiResult.category.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          const catMatch = categories.find((c: any) => {
+            if (!c.name) return false;
+            const dbCat = c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            return dbCat === aiCat || dbCat.startsWith(aiCat) || aiCat.startsWith(dbCat);
+          });
           if (catMatch) aiCategoryId = catMatch.id;
           else console.warn(`[AI] Unknown category "${aiResult.category}" — falling back to keywords`);
         }
         
-        // Map AI city name to region ID
+        // Map AI city name to region ID (fuzzy match)
         if (aiResult.city) {
-          const aiCity = aiResult.city.toLowerCase().trim();
-          const regMatch = regions.find((r: any) => 
-            r.name && r.name.toLowerCase() === aiCity
-          );
+          const aiCity = aiResult.city.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          const regMatch = regions.find((r: any) => {
+            if (!r.name) return false;
+            const dbCity = r.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            return dbCity === aiCity || dbCity.includes(aiCity) || aiCity.includes(dbCity);
+          });
           if (regMatch) aiRegionId = regMatch.id;
           else console.warn(`[AI] Unknown city "${aiResult.city}" — falling back to keywords`);
         }
@@ -594,8 +601,8 @@ Deno.serve(async (req) => {
 
     // Fetch categories, regions, settings, and sources
     const [catRes, regRes, settingsRes, sourcesRes] = await Promise.all([
-      supabase.from("categories").select("id, keywords"),
-      supabase.from("regions").select("id, keywords"),
+      supabase.from("categories").select("id, name, slug, keywords"),
+      supabase.from("regions").select("id, name, slug, keywords"),
       supabase.from("system_settings").select("key, value"),
       supabase.from("news_sources").select("*").eq("active", true),
     ]);
