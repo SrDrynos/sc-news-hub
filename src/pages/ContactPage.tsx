@@ -53,9 +53,8 @@ const ContactPage = () => {
                     <div>
                       <h3 className="font-medium mb-1">Endereço</h3>
                       <p className="text-muted-foreground">
-                        Av. Beira Mar Norte, 1234<br />
-                        Centro - Florianópolis, SC<br />
-                        CEP: 88015-000
+                        Rua Alvaro Avila, 123<br />
+                        Morro Grande - Sangão, SC
                       </p>
                     </div>
                   </div>
@@ -67,8 +66,7 @@ const ContactPage = () => {
                     <div>
                       <h3 className="font-medium mb-1">Telefone</h3>
                       <p className="text-muted-foreground">
-                        (48) 99999-9999<br />
-                        (48) 3333-3333
+                        (48) 9.9150-8411
                       </p>
                     </div>
                   </div>
@@ -80,8 +78,7 @@ const ContactPage = () => {
                     <div>
                       <h3 className="font-medium mb-1">E-mail</h3>
                       <p className="text-muted-foreground">
-                        contato@melhornewssc.com.br<br />
-                        redacao@melhornewssc.com.br
+                        contato@melhornews.com.br
                       </p>
                     </div>
                   </div>

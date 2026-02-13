@@ -13,6 +13,9 @@ import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
+import TeamPage from "./pages/TeamPage";
+import AdvertisePage from "./pages/AdvertisePage";
+import EditorialEthicsPage from "./pages/EditorialEthicsPage";
 import AuthPage from "./pages/AuthPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
@@ -50,6 +53,9 @@ const App = () => (
             <Route path="/sobre" element={<AboutPage />} />
             <Route path="/privacidade" element={<PrivacyPage />} />
             <Route path="/termos" element={<TermsPage />} />
+            <Route path="/equipe" element={<TeamPage />} />
+            <Route path="/publicidade" element={<AdvertisePage />} />
+            <Route path="/etica-editorial" element={<EditorialEthicsPage />} />
             <Route path="/auth" element={<AuthPage />} />
 
             {/* Admin routes */}

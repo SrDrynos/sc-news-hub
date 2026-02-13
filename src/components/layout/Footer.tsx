@@ -28,8 +28,8 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-primary-foreground/80 text-sm mb-4">
-              O portal de notícias mais completo de Santa Catarina. Informação de qualidade, 
-              credibilidade e compromisso com a verdade.
+              Centralizamos as notícias mais relevantes de Santa Catarina, com transparência, 
+              credibilidade e respeito às fontes oficiais.
             </p>
             <div className="flex gap-3">
               <a
@@ -158,26 +158,26 @@ const Footer = () => {
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <span className="text-primary-foreground/80 text-sm">
-                  Av. Beira Mar Norte, 1234<br />
-                  Florianópolis, SC - 88015-000
+                  Rua Alvaro Avila, 123<br />
+                  Morro Grande - Sangão, SC
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 flex-shrink-0" />
                 <a
-                  href="tel:+5548999999999"
+                  href="tel:+5548991508411"
                   className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
                 >
-                  (48) 99999-9999
+                  (48) 9.9150-8411
                 </a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 flex-shrink-0" />
                 <a
-                  href="mailto:contato@melhornewssc.com.br"
+                  href="mailto:contato@melhornews.com.br"
                   className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
                 >
-                  contato@melhornewssc.com.br
+                  contato@melhornews.com.br
                 </a>
               </li>
             </ul>
