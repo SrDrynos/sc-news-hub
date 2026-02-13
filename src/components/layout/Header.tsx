@@ -3,23 +3,27 @@ import { Link } from "react-router-dom";
 import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCategories, useRegions } from "@/hooks/useArticles";
+import { useRegions } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 
-// Max 10 items in the top menu (as per design spec)
-const MENU_CATEGORIES_LIMIT = 8; // 8 categories + Início + Cidades dropdown = 10
+// MENU OFICIAL FIXO – 8 itens, ordem obrigatória
+const MENU_ITEMS = [
+  { label: "Início", to: "/" },
+  { label: "Regional", to: "/categoria/cidades", hasDropdown: true },
+  { label: "Economia", to: "/categoria/economia" },
+  { label: "Educação", to: "/categoria/educacao" },
+  { label: "Política", to: "/categoria/politica" },
+  { label: "Polícia", to: "/categoria/policia" },
+  { label: "Esportes", to: "/categoria/esportes" },
+  { label: "Entretenimento", to: "/categoria/entretenimento" },
+];
 
 const Header = () => {
   const { isStaff } = useAuth();
-  const { data: categories = [] } = useCategories();
   const { data: regions = [] } = useRegions();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  // Split categories: first 8 go in menu, rest go in "Mais" dropdown
-  const visibleCategories = categories.filter(c => c.slug !== "cidades").slice(0, MENU_CATEGORIES_LIMIT);
-  const overflowCategories = categories.filter(c => c.slug !== "cidades").slice(MENU_CATEGORIES_LIMIT);
-  const cidadesCategory = categories.find(c => c.slug === "cidades");
+  const [isRegionalOpen, setIsRegionalOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card shadow-md">
@@ -55,74 +59,48 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Navigation - MAX 10 ITEMS */}
+      {/* Navigation – MENU FIXO OBRIGATÓRIO */}
       <nav className="bg-primary">
         <div className="container">
+          {/* Desktop */}
           <div className="hidden lg:flex items-center justify-between">
-            <ul className="flex items-center overflow-x-auto scrollbar-none">
-              {/* 1. Início */}
-              <li>
-                <Link to="/" className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap">
-                  Início
-                </Link>
-              </li>
-
-              {/* 2. Cidades (dropdown with regions) */}
-              {cidadesCategory && (
-                <li className="relative group">
-                  <Link to={`/categoria/${cidadesCategory.slug}`} className="flex items-center gap-1 px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap">
-                    Cidades
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </Link>
-                  <ul className="absolute left-0 top-full min-w-[200px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[400px] overflow-y-auto">
-                    <li>
-                      <Link to={`/categoria/${cidadesCategory.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors font-medium">
-                        Todas as Cidades
+            <ul className="flex items-center">
+              {MENU_ITEMS.map((item) => (
+                <li key={item.label} className={item.hasDropdown ? "relative group" : ""}>
+                  {item.hasDropdown ? (
+                    <>
+                      <Link
+                        to={item.to}
+                        className="flex items-center gap-1 px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap"
+                      >
+                        {item.label}
+                        <ChevronDown className="h-3.5 w-3.5" />
                       </Link>
-                    </li>
-                    {(regions as any[]).map((r) => (
-                      <li key={r.id}>
-                        <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                          {r.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              )}
-
-              {/* 3-10. Visible categories */}
-              {visibleCategories.map((cat) => (
-                <li key={cat.id}>
-                  <Link to={`/categoria/${cat.slug}`} className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap">
-                    {cat.name}
-                  </Link>
+                      <ul className="absolute left-0 top-full min-w-[220px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[400px] overflow-y-auto">
+                        <li>
+                          <Link to={item.to} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors font-medium">
+                            Todas as Cidades
+                          </Link>
+                        </li>
+                        {(regions as any[]).map((r) => (
+                          <li key={r.id}>
+                            <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                              {r.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <Link
+                      to={item.to}
+                      className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap"
+                    >
+                      {item.label}
+                    </Link>
+                  )}
                 </li>
               ))}
-
-              {/* Overflow "Mais" dropdown if needed */}
-              {overflowCategories.length > 0 && (
-                <li className="relative group">
-                  <button className="flex items-center gap-1 px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap">
-                    Mais
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                  <ul className="absolute right-0 top-full min-w-[180px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    {overflowCategories.map((cat) => (
-                      <li key={cat.id}>
-                        <Link to={`/categoria/${cat.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                          {cat.name}
-                        </Link>
-                      </li>
-                    ))}
-                    <li>
-                      <Link to="/contato" className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        Contato
-                      </Link>
-                    </li>
-                  </ul>
-                </li>
-              )}
             </ul>
             <div className="flex items-center gap-1 flex-shrink-0">
               {isStaff && (
@@ -138,29 +116,41 @@ const Header = () => {
           {isMenuOpen && (
             <div className="lg:hidden py-4 animate-slide-in-up max-h-[70vh] overflow-y-auto">
               <ul className="space-y-1">
-                <li>
-                  <Link to="/" className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>Início</Link>
-                </li>
-                {cidadesCategory && (
-                  <li>
-                    <Link to={`/categoria/${cidadesCategory.slug}`} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>Cidades</Link>
-                    <ul className="ml-4 space-y-1">
-                      {(regions as any[]).map((r) => (
-                        <li key={r.id}>
-                          <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>{r.name}</Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                )}
-                {categories.filter(c => c.slug !== "cidades").map((cat) => (
-                  <li key={cat.id}>
-                    <Link to={`/categoria/${cat.slug}`} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMenuOpen(false)}>{cat.name}</Link>
+                {MENU_ITEMS.map((item) => (
+                  <li key={item.label}>
+                    {item.hasDropdown ? (
+                      <>
+                        <button
+                          onClick={() => setIsRegionalOpen(!isRegionalOpen)}
+                          className="flex items-center justify-between w-full px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium"
+                        >
+                          {item.label}
+                          <ChevronDown className={`h-4 w-4 transition-transform ${isRegionalOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isRegionalOpen && (
+                          <ul className="ml-4 space-y-1">
+                            <li>
+                              <Link to={item.to} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm font-medium" onClick={() => setIsMenuOpen(false)}>
+                                Todas as Cidades
+                              </Link>
+                            </li>
+                            {(regions as any[]).map((r) => (
+                              <li key={r.id}>
+                                <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>
+                                  {r.name}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <Link to={item.to} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                        {item.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
-                <li>
-                  <Link to="/contato" className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMenuOpen(false)}>Contato</Link>
-                </li>
               </ul>
             </div>
           )}
