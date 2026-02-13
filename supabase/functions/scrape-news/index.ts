@@ -17,13 +17,27 @@ interface ExtractedArticle {
   published_date: string | null;
 }
 
-// 19 authorized cities
+// ─── 19 CIDADES AUTORIZADAS ─────────────────────────────────────
 const TARGET_CITIES = [
   "Florianópolis", "Joinville", "Blumenau", "Balneário Camboriú", "Itajaí",
   "São José", "Criciúma", "Chapecó", "Jaraguá do Sul", "Brusque",
   "Tubarão", "Lages", "Itapema", "Palhoça", "Araranguá",
   "Sangão", "Morro da Fumaça", "Treze de Maio", "Jaguaruna",
 ];
+
+// ─── REGRA 1: Período máximo de 24 horas ────────────────────────
+function isWithin24Hours(publishedDate: string | null): boolean {
+  if (!publishedDate) return true; // se não tem data, aceita (será filtrado por outros critérios)
+  try {
+    const pubDate = new Date(publishedDate);
+    if (isNaN(pubDate.getTime())) return true;
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return pubDate >= yesterday && pubDate <= now;
+  } catch {
+    return true;
+  }
+}
 
 // ─── Content Cleaning ────────────────────────────────────────────
 function cleanContent(markdown: string): string {
@@ -38,35 +52,12 @@ function cleanContent(markdown: string): string {
   return text.trim();
 }
 
-function extractImageUrl(markdown: string, links: string[]): string | null {
-  const mdImages = markdown.match(/!\[[^\]]*\]\(([^)]+)\)/g);
-  if (mdImages) {
-    for (const img of mdImages) {
-      const match = img.match(/!\[[^\]]*\]\(([^)]+)\)/);
-      if (match?.[1] && isValidImageUrl(match[1])) return match[1];
-    }
-  }
-  for (const link of links) {
-    if (isValidImageUrl(link)) return link;
-  }
-  return null;
-}
-
 function isValidImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
   if (!/\.(jpg|jpeg|png|webp|gif|avif)/i.test(lower) && !lower.includes("/image") && !lower.includes("img")) return false;
   const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small"];
   return !exclude.some((ex) => lower.includes(ex));
-}
-
-function extractSubtitle(content: string, title: string): string {
-  const lines = content.split("\n").filter((l) => l.trim().length > 20);
-  for (const line of lines.slice(0, 3)) {
-    const clean = line.replace(/^#+\s*/, "").trim();
-    if (clean !== title && clean.length > 20 && clean.length < 300) return clean;
-  }
-  return (content.split("\n\n")[0]?.trim() || "").substring(0, 150);
 }
 
 // ─── Image Storage ───────────────────────────────────────────────
@@ -93,42 +84,6 @@ async function downloadAndStoreImage(imageUrl: string, articleId: string, supaba
   } catch (err) { console.error("Image download error:", err); return null; }
 }
 
-// ─── Scoring ─────────────────────────────────────────────────────
-function scoreArticle(article: ExtractedArticle, trustScore: number, weights: Record<string, number>): { score: number; criteria: Record<string, any> } {
-  const criteria: Record<string, any> = {};
-  let total = 0, maxPossible = 0;
-
-  const w1 = weights.trusted_source || 2; maxPossible += w1;
-  if (trustScore >= 7) { total += w1; criteria.trusted_source = true; } else criteria.trusted_source = false;
-
-  const w2 = weights.complete_content || 2; maxPossible += w2;
-  const wordCount = article.content.split(/\s+/).length;
-  if (wordCount > 150) { total += w2; criteria.complete_content = true; }
-  else if (wordCount > 80) { total += w2 * 0.5; criteria.complete_content = "partial"; }
-  else criteria.complete_content = false;
-  criteria.word_count = wordCount;
-
-  const w3 = weights.has_image || 2; maxPossible += w3;
-  if (article.image_url) { total += w3; criteria.has_image = true; } else criteria.has_image = false;
-
-  const w4 = weights.has_author || 1; maxPossible += w4;
-  if (article.author) { total += w4; criteria.has_author = true; } else criteria.has_author = false;
-
-  const w5 = weights.has_subtitle || 1; maxPossible += w5;
-  if (article.subtitle && article.subtitle.length > 20) { total += w5; criteria.has_subtitle = true; } else criteria.has_subtitle = false;
-
-  const w6 = weights.content_quality || 1; maxPossible += w6;
-  const paragraphs = article.content.split("\n\n").filter((p) => p.trim().length > 30).length;
-  if (paragraphs >= 3) { total += w6; criteria.good_structure = true; } else criteria.good_structure = false;
-  criteria.paragraph_count = paragraphs;
-
-  const w7 = weights.has_date || 1; maxPossible += w7;
-  if (article.published_date) { total += w7; criteria.has_date = true; } else criteria.has_date = false;
-
-  const score = maxPossible > 0 ? (total / maxPossible) * 10 : 0;
-  return { score: Math.round(score * 100) / 100, criteria };
-}
-
 // ─── Classification ──────────────────────────────────────────────
 function classifyCategory(text: string, categories: Array<{ id: string; keywords: any }>): string | null {
   const lower = text.toLowerCase();
@@ -153,12 +108,7 @@ function classifyRegion(text: string, regions: Array<{ id: string; keywords: any
 
 // ─── Title Similarity Detection ──────────────────────────────────
 function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
-    .replace(/[^a-z0-9\s]/g, "") // remove punctuation
-    .replace(/\s+/g, " ")
-    .trim();
+  return title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 }
 
 function getSignificantWords(normalized: string): Set<string> {
@@ -179,24 +129,17 @@ function titleSimilarity(a: string, b: string): number {
   if (wordsA.size === 0 || wordsB.size === 0) return 0;
   let intersection = 0;
   for (const w of wordsA) { if (wordsB.has(w)) intersection++; }
-  // Jaccard similarity
   const union = new Set([...wordsA, ...wordsB]).size;
   return union > 0 ? intersection / union : 0;
 }
 
-const SIMILARITY_THRESHOLD = 0.6; // 60% word overlap = same subject
+const SIMILARITY_THRESHOLD = 0.6;
 
 async function isSimilarToExisting(title: string, supabase: any): Promise<boolean> {
-  // Fetch recent published/draft article titles (last 7 days)
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: recentArticles } = await supabase
-    .from("articles")
-    .select("title")
-    .gte("created_at", since)
-    .limit(500);
-
+    .from("articles").select("title").gte("created_at", since).limit(500);
   if (!recentArticles?.length) return false;
-
   for (const existing of recentArticles) {
     const sim = titleSimilarity(title, existing.title);
     if (sim >= SIMILARITY_THRESHOLD) {
@@ -221,19 +164,20 @@ function cleanTitle(title: string): string {
   return t;
 }
 
-// ─── AI Content Rewriter ─────────────────────────────────────────
-async function rewriteWithAI(article: ExtractedArticle): Promise<{ content: string; excerpt: string; meta_description: string } | null> {
+// ─── AI Summary Generator (APENAS resumo 80-300 palavras) ────────
+async function generateSummaryWithAI(article: ExtractedArticle): Promise<{ excerpt: string; meta_description: string } | null> {
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!lovableApiKey) {
-    console.warn("[AI] LOVABLE_API_KEY not configured, skipping rewrite");
+    console.warn("[AI] LOVABLE_API_KEY not configured, skipping summary");
     return null;
   }
 
   try {
-    const prompt = `Você é redator do portal "Melhor News", um AGREGADOR de notícias. O Melhor News NÃO produz matérias jornalísticas. Ele publica apenas RESUMOS INFORMATIVOS curtos que direcionam o leitor para a fonte original.
+    const prompt = `Você é redator do portal "Melhor News", um AGREGADOR de notícias de Santa Catarina.
+O Melhor News NÃO produz matérias jornalísticas. Ele publica APENAS RESUMOS INFORMATIVOS curtos que direcionam o leitor para a fonte original.
 
 REGRAS OBRIGATÓRIAS:
-1. Gere APENAS um resumo informativo de 80 a 150 palavras (máximo absoluto: 300 palavras)
+1. Gere APENAS um resumo informativo de 80 a 150 palavras (MÁXIMO ABSOLUTO: 300 palavras)
 2. Texto em 1-2 parágrafos simples, SEM subtítulos (H2, H3), SEM conclusão, SEM opinião
 3. Linguagem neutra, descritiva, factual — como uma sinopse
 4. NÃO use linguagem de autoria ("segundo apuração", "conforme levantamento")
@@ -241,17 +185,19 @@ REGRAS OBRIGATÓRIAS:
 6. NÃO inclua links no texto
 7. Identifique a cidade de origem se mencionada na notícia
 8. NÃO crie aparência de matéria jornalística completa
+9. NUNCA copie o texto integral da fonte — apenas resuma os pontos principais
 
+DADOS DA NOTÍCIA:
 TÍTULO: ${article.title}
-SUBTÍTULO: ${article.subtitle}
-CONTEÚDO ORIGINAL:
+FONTE: ${article.source_name}
+DESCRIÇÃO: ${article.subtitle}
+CONTEÚDO DISPONÍVEL:
 ${article.content.substring(0, 2000)}
 
-Responda APENAS com um JSON válido no formato:
+Responda APENAS com JSON válido:
 {
-  "content": "",
-  "excerpt": "Resumo informativo de 80-150 palavras, descritivo e factual, sem opinião, sem subtítulos.",
-  "meta_description": "Meta description SEO de 150-160 caracteres com palavra-chave principal"
+  "excerpt": "Resumo informativo de 80-150 palavras, descritivo e factual.",
+  "meta_description": "Meta description SEO de 150-160 caracteres"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -263,7 +209,7 @@ Responda APENAS com um JSON válido no formato:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você é redator do portal Melhor News, um agregador de notícias. Gere APENAS resumos curtos (80-150 palavras) em JSON válido, sem markdown code blocks. NUNCA produza matérias longas." },
+          { role: "system", content: "Você gera APENAS resumos curtos (80-150 palavras) em JSON válido. NUNCA produza matérias longas. NUNCA copie o conteúdo integral." },
           { role: "user", content: prompt },
         ],
       }),
@@ -278,7 +224,6 @@ Responda APENAS com um JSON válido no formato:
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || "";
     
-    // Extract JSON from response (handle markdown code blocks)
     let jsonStr = rawContent.trim();
     if (jsonStr.startsWith("```")) {
       jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
@@ -290,10 +235,57 @@ Responda APENAS com um JSON válido no formato:
       return null;
     }
 
-    console.log(`[AI] ✓ Rewritten "${article.title}" (${parsed.content.split(/\s+/).length} words)`);
+    // Validate word count: 80-300
+    const wordCount = parsed.excerpt.replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+    if (wordCount < 80) {
+      console.warn(`[AI] Summary only ${wordCount} words for "${article.title}" (min 80)`);
+      return null;
+    }
+    if (wordCount > 300) {
+      // Truncate to 300 words
+      const words = parsed.excerpt.split(/\s+/);
+      parsed.excerpt = words.slice(0, 300).join(" ");
+    }
+
+    console.log(`[AI] ✓ Summary for "${article.title}" (${wordCount} words)`);
     return parsed;
   } catch (err) {
-    console.error(`[AI] Error rewriting "${article.title}":`, err);
+    console.error(`[AI] Error generating summary for "${article.title}":`, err);
+    return null;
+  }
+}
+
+// ─── Firecrawl Fallback: fetch full page content ─────────────────
+async function fetchFullContentWithFirecrawl(url: string, firecrawlKey: string): Promise<string | null> {
+  try {
+    console.log(`[Firecrawl] Scraping full content: ${url}`);
+    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${firecrawlKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[Firecrawl] Scrape error ${response.status}: ${errText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.success) return null;
+
+    const markdown = data.data?.markdown || data.markdown || "";
+    const cleaned = cleanContent(markdown);
+    return cleaned.length > 100 ? cleaned : null;
+  } catch (err) {
+    console.error(`[Firecrawl] Error scraping ${url}:`, err);
     return null;
   }
 }
@@ -308,7 +300,7 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
 
     const articles: ExtractedArticle[] = [];
     const items = xml.split(/<item>/i).slice(1);
-    for (const item of items.slice(0, 15)) {
+    for (const item of items.slice(0, 20)) {
       const getTag = (tag: string) => {
         const m = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([^\\]]*?)\\]\\]></${tag}>`, "is"))
           || item.match(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "is"));
@@ -322,6 +314,11 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
       const pubDate = getTag("pubDate") || getTag("dc:date");
       const author = getTag("dc:creator") || getTag("author");
 
+      // REGRA 6: Prioridade temporal — rejeitar notícias fora das últimas 24h
+      if (!isWithin24Hours(pubDate)) {
+        continue; // silently skip old articles
+      }
+
       let imageUrl: string | null = null;
       const enclosure = item.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
       if (enclosure?.[1]) imageUrl = enclosure[1];
@@ -334,41 +331,50 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
         if (imgInContent?.[1]) imageUrl = imgInContent[1];
       }
 
+      // Capturar apenas metadados + descrição/conteúdo do RSS (REGRA 4)
       let body = contentEncoded || description;
       body = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
       if (!title || title.length < 10 || !link) continue;
 
       articles.push({
-        title, subtitle: description.replace(/<[^>]+>/g, "").substring(0, 200).trim(),
-        content: body, image_url: imageUrl, source_url: link,
-        source_name: sourceName, author: author || null, published_date: pubDate || null,
+        title,
+        subtitle: description.replace(/<[^>]+>/g, "").substring(0, 300).trim(),
+        content: body,
+        image_url: imageUrl,
+        source_url: link,
+        source_name: sourceName,
+        author: author || null,
+        published_date: pubDate || null,
       });
     }
-    console.log(`[RSS] Parsed ${articles.length} articles from ${sourceName}`);
+
+    // REGRA 6: Ordenar por data mais recente primeiro
+    articles.sort((a, b) => {
+      const dateA = a.published_date ? new Date(a.published_date).getTime() : 0;
+      const dateB = b.published_date ? new Date(b.published_date).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    console.log(`[RSS] Parsed ${articles.length} articles from ${sourceName} (last 24h)`);
     return articles;
   } catch (err) { console.error(`[RSS] Error fetching ${feedUrl}:`, err); return []; }
 }
 
-// (NewsAPI removed — all sources managed via admin "Fontes" page)
-
-// (APITube removed — all sources managed via admin "Fontes" page)
-
-// ─── Process and Save Article ────────────────────────────────────
+// ─── Process and Save Article (PÁGINA DE REDIRECIONAMENTO) ───────
 async function processAndSave(
   article: ExtractedArticle,
   supabase: any,
   supabaseUrl: string,
   categories: any[],
   regions: any[],
-  weights: Record<string, number>,
   autoPublish: any,
   trustScore: number,
-  enableAI: boolean
+  enableAI: boolean,
+  firecrawlKey: string | null,
 ): Promise<boolean> {
   try {
     if (!article.title || article.title.length < 10) return false;
-    if (article.content.length < 80) return false;
 
     // Reject articles with JSON garbage in source_name
     if (article.source_name && (article.source_name.includes("{") || article.source_name.includes("Upgrade subscription"))) {
@@ -376,16 +382,16 @@ async function processAndSave(
       return false;
     }
 
-    // Check if article is about SC region (target cities OR generic SC mentions)
+    // REGRA: Check if article is about SC region (target cities OR generic SC mentions)
     const fullText = `${article.title} ${article.subtitle} ${article.content}`;
     const isAboutCity = isAboutTargetCity(fullText);
-    const isAboutSC = /santa catarina|\bsc\b|catarinense|sul catarinense|norte catarinense|oeste catarinense|vale do itajaí|serra catarinense|litoral sul|litoral norte/i.test(fullText);
+    const isAboutSC = /santa catarina|catarinense|sul catarinense|norte catarinense|oeste catarinense|vale do itajaí|serra catarinense|litoral sul|litoral norte/i.test(fullText);
     if (!isAboutCity && !isAboutSC) {
       console.warn(`Rejected "${article.title}" - not about target city or SC`);
       return false;
     }
 
-    // Check duplicates by source_url or title
+    // REGRA 3: Anti-duplicação — check by source_url and title
     if (article.source_url) {
       const { data: byUrl } = await supabase.from("articles").select("id").eq("source_url", article.source_url).limit(1);
       if (byUrl?.length) return false;
@@ -393,92 +399,92 @@ async function processAndSave(
     const { data: byTitle } = await supabase.from("articles").select("id").eq("title", article.title).limit(1);
     if (byTitle?.length) return false;
 
-    // Check similarity with existing titles (same subject, different wording)
+    // Anti-duplicação: similaridade de títulos
     const isSimilar = await isSimilarToExisting(article.title, supabase);
     if (isSimilar) return false;
 
+    // ─── REGRA INEGOCIÁVEL: fonte deve ter mínimo 300 palavras ───
+    // Se RSS tem menos de 300, tenta Firecrawl como fallback
+    const originalWordCount = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+    
+    if (originalWordCount < 300) {
+      if (firecrawlKey && article.source_url) {
+        console.log(`[Fallback] RSS has only ${originalWordCount} words for "${article.title}" — trying Firecrawl...`);
+        const fullContent = await fetchFullContentWithFirecrawl(article.source_url, firecrawlKey);
+        if (fullContent) {
+          const fcWordCount = fullContent.replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+          if (fcWordCount >= 300) {
+            article.content = fullContent;
+            console.log(`[Fallback] ✓ Firecrawl got ${fcWordCount} words for "${article.title}"`);
+          } else {
+            console.warn(`[Content] Rejected "${article.title}" — Firecrawl only ${fcWordCount} words (min 300)`);
+            return false;
+          }
+        } else {
+          console.warn(`[Content] Rejected "${article.title}" — RSS ${originalWordCount} words + Firecrawl failed (min 300)`);
+          return false;
+        }
+      } else {
+        console.warn(`[Content] Rejected "${article.title}" — only ${originalWordCount} words (min 300, no Firecrawl)`);
+        return false;
+      }
+    }
+
     const articleId = crypto.randomUUID();
 
-    // Download and store image locally (optional - use placeholder if fails)
+    // Download and store image (optional)
     let storedImageUrl: string | null = null;
     if (article.image_url) {
       storedImageUrl = await downloadAndStoreImage(article.image_url, articleId, supabase, supabaseUrl);
     }
-
-    // Use placeholder image if download failed
     if (!storedImageUrl) {
-      console.log(`[Image] Using placeholder for "${article.title}" (original: ${article.image_url || "none"})`);
       storedImageUrl = `${supabaseUrl}/storage/v1/object/public/article-images/placeholder-news.jpg`;
     }
 
-    const finalArticle = { ...article, image_url: storedImageUrl };
-    const { score, criteria } = scoreArticle(finalArticle, trustScore, weights);
-
-    const categoryId = classifyCategory(fullText, categories);
-    const regionId = classifyRegion(fullText, regions);
-
-    // AI Rewrite for richer content
-    let bodyContent = article.content;
+    // ─── REGRA 5: Gerar APENAS resumo (80-300 palavras) ──────────
     let excerpt = article.subtitle;
     let metaDescription: string | null = null;
 
-    // REGRA INEGOCIÁVEL: fonte original deve ter no mínimo 300 palavras
-    // (previne que a IA fabrique artigos a partir de trechos curtos)
-    const originalWordCount = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
-    if (originalWordCount < 300) {
-      console.warn(`[Content] Rejected "${article.title}" — original only ${originalWordCount} words (min 300 to rewrite)`);
-      return false;
-    }
-
     if (enableAI) {
-      const rewritten = await rewriteWithAI(article);
-      if (rewritten) {
-        bodyContent = rewritten.content;
-        excerpt = rewritten.excerpt;
-        metaDescription = rewritten.meta_description;
+      const summary = await generateSummaryWithAI(article);
+      if (summary) {
+        excerpt = summary.excerpt;
+        metaDescription = summary.meta_description;
       }
     }
 
-    // Fallback: clean body if not rewritten
-    if (!enableAI || !metaDescription) {
-      if (bodyContent.startsWith(article.title)) bodyContent = bodyContent.substring(article.title.length).trim();
-      if (article.subtitle && bodyContent.startsWith(article.subtitle)) bodyContent = bodyContent.substring(article.subtitle.length).trim();
-    }
-
-    // ─── Minimum word count gate (300 words) ───────────────────────
-    const finalWordCount = bodyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
-    if (finalWordCount < 300) {
-      console.warn(`[WordCount] Rejected "${article.title}" — only ${finalWordCount} words (min 300)`);
-      return false;
-    }
-
-    // Ensure excerpt is always populated (up to 500 words, SEO-friendly)
+    // Fallback excerpt if AI fails
     if (!excerpt || excerpt.length < 50) {
-      const plainText = bodyContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const plainText = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       const words = plainText.split(" ");
-      excerpt = words.slice(0, Math.min(500, words.length)).join(" ");
-      if (words.length > 500) excerpt += "...";
+      excerpt = words.slice(0, Math.min(150, words.length)).join(" ");
+      if (words.length > 150) excerpt += "...";
     }
 
-    // Ensure meta_description is always populated (150-160 chars for SEO)
+    // Ensure meta_description
     if (!metaDescription || metaDescription.length < 50) {
-      const plainExcerpt = (excerpt || article.subtitle || bodyContent).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const plainExcerpt = (excerpt || article.subtitle).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       metaDescription = plainExcerpt.substring(0, 157);
       if (plainExcerpt.length > 157) metaDescription += "...";
     }
 
+    const categoryId = classifyCategory(fullText, categories);
+    const regionId = classifyRegion(fullText, regions);
+
+    // Auto-publish based on trust score
     let status = "recycled";
     let publishedAt: string | null = null;
-    if (autoPublish.enabled && score >= autoPublish.min_score) {
+    if (autoPublish.enabled && trustScore >= (autoPublish.min_score || 7)) {
       status = "published";
       publishedAt = new Date().toISOString();
     }
 
+    // REGRA 7: NUNCA copiar matéria completa — content = resumo apenas
     const { error } = await supabase.from("articles").insert({
       id: articleId,
       title: article.title,
       excerpt,
-      content: bodyContent,
+      content: excerpt, // Página de redirecionamento: conteúdo = resumo
       image_url: storedImageUrl,
       image_caption: `Foto: ${article.source_name}`,
       meta_description: metaDescription,
@@ -487,15 +493,15 @@ async function processAndSave(
       author: "Redação Melhor News",
       category_id: categoryId,
       region_id: regionId,
-      score,
-      score_criteria: criteria,
+      score: trustScore,
+      score_criteria: { trust_score: trustScore, has_image: !!article.image_url, word_count: originalWordCount },
       status,
       published_at: publishedAt,
       scraped_at: new Date().toISOString(),
     });
 
     if (error) { console.error(`Insert error for "${article.title}":`, error); return false; }
-    console.log(`✓ Saved: "${article.title}" (score: ${score}, status: ${status}, cat: ${categoryId ? "yes" : "no"}, region: ${regionId ? "yes" : "no"})`);
+    console.log(`✓ Saved: "${article.title}" (status: ${status}, cat: ${categoryId ? "yes" : "no"}, region: ${regionId ? "yes" : "no"})`);
     return true;
   } catch (err) { console.error(`Error processing "${article.title}":`, err); return false; }
 }
@@ -509,7 +515,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
+    const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY") || null;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -527,14 +533,13 @@ Deno.serve(async (req) => {
     const settingsMap: Record<string, any> = {};
     for (const s of settingsRes.data || []) settingsMap[s.key] = s.value;
     const autoPublish = settingsMap.auto_publish || { enabled: false, min_score: 7.5 };
-    const weights = settingsMap.scoring_weights || {};
     const sources = sourcesRes.data || [];
     const enableAI = !!lovableApiKey;
 
     let articlesProcessed = 0;
     const allArticles: { article: ExtractedArticle; trustScore: number }[] = [];
 
-    // ─── RSS Feeds (only from admin "Fontes" page) ──────────────────
+    // ─── RSS Feeds (from admin "Fontes" page) ────────────────────
     const rssFeeds: { url: string; name: string; trustScore: number }[] = [];
     for (const s of sources) {
       if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name, trustScore: s.trust_score || 5 });
@@ -546,89 +551,25 @@ Deno.serve(async (req) => {
       for (const a of rssResults[i]) allArticles.push({ article: a, trustScore: rssFeeds[i].trustScore });
     }
 
-    // ─── Source 4: Firecrawl deep scraping ──────────────────────────
-    if (firecrawlKey && sources.length > 0) {
-      for (const source of sources) {
-        try {
-          console.log(`[Firecrawl] Mapping: ${source.name} (${source.url})`);
-          const mapResponse = await fetch("https://api.firecrawl.dev/v1/map", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ url: source.url, limit: 15, includeSubdomains: false }),
-          });
-          const mapData = await mapResponse.json();
-          if (!mapResponse.ok || !mapData.success) { console.error(`Map failed for ${source.name}`); continue; }
+    // ─── REGRA 6: Ordenar por data mais recente (prioridade máxima) ─
+    allArticles.sort((a, b) => {
+      const dateA = a.article.published_date ? new Date(a.article.published_date).getTime() : 0;
+      const dateB = b.article.published_date ? new Date(b.article.published_date).getTime() : 0;
+      return dateB - dateA;
+    });
 
-          const articleUrls = (mapData.links || []).filter((url: string) => {
-            const lower = url.toLowerCase();
-            return url.length > 50 && !lower.endsWith(".pdf") && !lower.endsWith(".xml") &&
-              !lower.includes("/tag/") && !lower.includes("/categoria/") && !lower.includes("/author/") &&
-              !lower.includes("/page/") && !lower.includes("/login") && !lower.includes("/busca") && !lower.includes("/feed") &&
-              (lower.includes("/noticia") || lower.includes("/noticias") || lower.includes("/materia") || lower.includes("/news") || /\/\d{4}\/\d{2}\//.test(lower) || lower.split("/").length >= 4);
-          }).slice(0, 8);
-
-          console.log(`[Firecrawl] Found ${articleUrls.length} URLs from ${source.name}`);
-
-          for (const articleUrl of articleUrls) {
-            try {
-              const { data: existing } = await supabase.from("articles").select("id").eq("source_url", articleUrl).limit(1);
-              if (existing?.length) continue;
-
-              const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ url: articleUrl, formats: ["markdown", "links"], onlyMainContent: true }),
-              });
-              const scrapeData = await scrapeRes.json();
-              if (!scrapeRes.ok || !scrapeData.success) continue;
-
-              const rawMd = scrapeData.data?.markdown || "";
-              const metadata = scrapeData.data?.metadata || {};
-              const links = scrapeData.data?.links || [];
-              const cleaned = cleanContent(rawMd);
-              if (cleaned.length < 100) continue;
-
-              let title = cleanTitle(metadata.title || "");
-              if (!title || title.length < 10) {
-                title = cleaned.split("\n")[0]?.replace(/^#+\s*/, "").trim() || "";
-              }
-              if (!title || title.length < 10 || title.length > 300) continue;
-
-              const subtitle = extractSubtitle(cleaned, title);
-              const imageUrl = extractImageUrl(rawMd, links);
-
-              let body = cleaned;
-              if (body.startsWith(title)) body = body.substring(title.length).trim();
-              if (subtitle && body.startsWith(subtitle)) body = body.substring(subtitle.length).trim();
-
-              allArticles.push({
-                article: {
-                  title, subtitle, content: body,
-                  image_url: imageUrl, source_url: articleUrl,
-                  source_name: source.name,
-                  author: metadata.author || null,
-                  published_date: metadata.publishedTime || metadata.date || null,
-                },
-                trustScore: source.trust_score || 5,
-              });
-            } catch (e) { console.error(`Error scraping ${articleUrl}:`, e); }
-          }
-        } catch (e) { console.error(`Error with source ${source.name}:`, e); }
-      }
-    }
-
-    // ─── Save all collected articles ─────────────────────────────────
-    console.log(`[Total] ${allArticles.length} articles collected. Processing with AI=${enableAI}...`);
+    // ─── Save all collected articles ─────────────────────────────
+    console.log(`[Total] ${allArticles.length} articles collected (last 24h). Processing with AI=${enableAI}, Firecrawl=${!!firecrawlKey}...`);
 
     for (const { article, trustScore } of allArticles) {
-      const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, weights, autoPublish, trustScore, enableAI);
+      const saved = await processAndSave(article, supabase, supabaseUrl, categories, regions, autoPublish, trustScore, enableAI, firecrawlKey);
       if (saved) articlesProcessed++;
     }
 
     console.log(`[Done] ${articlesProcessed} new articles saved.`);
 
     return new Response(
-      JSON.stringify({ success: true, articlesProcessed, totalCollected: allArticles.length, aiEnabled: enableAI }),
+      JSON.stringify({ success: true, articlesProcessed, totalCollected: allArticles.length, aiEnabled: enableAI, firecrawlEnabled: !!firecrawlKey }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
