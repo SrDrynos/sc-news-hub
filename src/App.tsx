@@ -23,6 +23,8 @@ import CategoriesPage from "./pages/admin/CategoriesPage";
 import RegionsPage from "./pages/admin/RegionsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import RssPage from "./pages/admin/RssPage";
+import PartnersPage from "./pages/admin/PartnersPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +58,8 @@ const App = () => (
             <Route path="/admin/regioes" element={<AdminLayout><RegionsPage /></AdminLayout>} />
             <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
+            <Route path="/admin/rss" element={<AdminLayout><RssPage /></AdminLayout>} />
+            <Route path="/admin/parceiros" element={<AdminLayout><PartnersPage /></AdminLayout>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
