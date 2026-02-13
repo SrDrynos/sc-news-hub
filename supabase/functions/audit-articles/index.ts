@@ -59,8 +59,8 @@ Deno.serve(async (req) => {
             problems.push("image_404");
           } else {
             const contentLength = parseInt(imgRes.headers.get("content-length") || "0", 10);
-            // Images under 5KB are likely logos/icons/broken
-            if (contentLength > 0 && contentLength < 5000) {
+            // Images under 10KB are likely logos/icons/broken
+            if (contentLength > 0 && contentLength < 10000) {
               problems.push("image_too_small");
             }
             // Check content type
@@ -71,6 +71,17 @@ Deno.serve(async (req) => {
           }
         } catch {
           problems.push("image_unreachable");
+        }
+      }
+      // 4b. Also check if image_url is accessible at all (any URL)
+      else if (article.image_url && !article.image_url.includes("/storage/v1/object/public/article-images/")) {
+        try {
+          const imgRes = await fetch(article.image_url, { method: "HEAD", redirect: "follow" });
+          if (!imgRes.ok) {
+            problems.push("external_image_broken");
+          }
+        } catch {
+          problems.push("external_image_unreachable");
         }
       }
 
