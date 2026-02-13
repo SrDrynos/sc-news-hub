@@ -226,10 +226,10 @@ export const useUpdateSetting = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
+      // upsert: insert if missing, update if exists
       const { error } = await supabase
         .from("system_settings")
-        .update({ value })
-        .eq("key", key);
+        .upsert({ key, value, updated_at: new Date().toISOString() } as any, { onConflict: "key" });
       if (error) throw error;
     },
     onSuccess: () => {
