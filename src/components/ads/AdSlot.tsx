@@ -68,8 +68,8 @@ const AdSlot = ({ position, className = "" }: AdSlotProps) => {
         }}
         data-ad-client={publisherId}
         data-ad-slot={adSlotId || undefined}
-        data-ad-format={adSlotId ? undefined : "auto"}
-        data-full-width-responsive="true"
+        data-ad-format={adSlotId ? undefined : "rectangle"}
+        data-full-width-responsive={adSlotId ? undefined : "false"}
       />
     </div>
   );
