@@ -422,11 +422,11 @@ async function processAndSave(
     let excerpt = article.subtitle;
     let metaDescription: string | null = null;
 
-    // Only rewrite with AI if original content has at least 100 words
-    // (prevents AI from fabricating entire articles from tiny snippets)
+    // REGRA INEGOCIÁVEL: fonte original deve ter no mínimo 300 palavras
+    // (previne que a IA fabrique artigos a partir de trechos curtos)
     const originalWordCount = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
-    if (originalWordCount < 100) {
-      console.warn(`[Content] Rejected "${article.title}" — original only ${originalWordCount} words (min 100 to rewrite)`);
+    if (originalWordCount < 300) {
+      console.warn(`[Content] Rejected "${article.title}" — original only ${originalWordCount} words (min 300 to rewrite)`);
       return false;
     }
 
