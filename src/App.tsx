@@ -56,6 +56,7 @@ const App = () => (
             <Route path="/equipe" element={<TeamPage />} />
             <Route path="/publicidade" element={<AdvertisePage />} />
             <Route path="/etica-editorial" element={<EditorialEthicsPage />} />
+            <Route path="/ads.txt" element={<AdsTxtPage />} />
             <Route path="/auth" element={<AuthPage />} />
 
             {/* Admin routes */}
