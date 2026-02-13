@@ -26,6 +26,7 @@ import SettingsPage from "./pages/admin/SettingsPage";
 import RssPage from "./pages/admin/RssPage";
 import PartnersPage from "./pages/admin/PartnersPage";
 import NotFound from "./pages/NotFound";
+import AdsTxtPage from "./pages/AdsTxtPage";
 import AnalyticsProvider from "./components/analytics/AnalyticsProvider";
 
 const queryClient = new QueryClient();
