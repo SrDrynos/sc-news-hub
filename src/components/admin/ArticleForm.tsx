@@ -32,8 +32,7 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
   const excerptWords = useMemo(() => countWords(data.excerpt || ""), [data.excerpt]);
   const metaLen = (data.meta_description || "").length;
 
-  const wordCountColor = wordCount < 150 ? "text-red-600" : wordCount > 300 ? "text-red-600" : "text-green-600";
-  const excerptCountColor = excerptWords > 100 ? "text-red-600" : "text-green-600";
+  const excerptCountColor = excerptWords > 300 ? "text-red-600" : excerptWords >= 80 ? "text-green-600" : "text-amber-600";
   const metaColor = metaLen === 0 ? "text-muted-foreground" : metaLen < 150 ? "text-amber-600" : metaLen > 160 ? "text-red-600" : "text-green-600";
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,34 +90,34 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         />
       </div>
 
-      {/* Subtítulo */}
+      {/* Resumo informativo (principal — exibido na página) */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <Label>Subtítulo (linha fina) *</Label>
+          <Label>Resumo informativo * <span className="text-muted-foreground text-xs">(80-300 palavras)</span></Label>
           <span className={`text-xs font-medium ${excerptCountColor}`}>
-            {excerptWords} palavras {excerptWords > 100 ? "(máx. 100)" : "✓"}
+            {excerptWords} palavras {excerptWords > 300 ? "(máx. 300)" : excerptWords < 80 ? "(mín. 80)" : "✓"}
           </span>
         </div>
-        <Textarea placeholder="Resumo explicativo da notícia (não repita o título)" value={data.excerpt || ""} onChange={(e) => onChange({ ...data, excerpt: e.target.value })} rows={2} />
+        <Textarea placeholder="Resumo curto e factual da notícia (será exibido na página)" value={data.excerpt || ""} onChange={(e) => onChange({ ...data, excerpt: e.target.value })} rows={4} />
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Este é o texto principal exibido na página. Deve ser um resumo informativo, sem opinião.
+        </p>
       </div>
 
-      {/* Conteúdo */}
+      {/* Conteúdo adicional (opcional) */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <Label>Conteúdo *</Label>
-          <span className={`text-xs font-medium ${wordCountColor}`}>
-            {wordCount} palavras {wordCount < 150 ? "(mín. 150)" : wordCount > 300 ? "(máx. 300)" : "✓"}
+          <Label>Conteúdo adicional <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+          <span className="text-xs text-muted-foreground">
+            {wordCount} palavras
           </span>
         </div>
         <Textarea
-          placeholder={"Corpo da notícia em parágrafos...\n\nUse <h2> e <h3> para subtítulos, <p> para parágrafos."}
+          placeholder="Notas adicionais (opcional — o resumo acima é o conteúdo principal)"
           value={data.content || ""}
           onChange={(e) => onChange({ ...data, content: e.target.value })}
-          rows={14}
+          rows={6}
         />
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Dica: Use tags HTML — &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt; — para estruturar o texto.
-        </p>
       </div>
 
       {/* Imagem Upload */}
