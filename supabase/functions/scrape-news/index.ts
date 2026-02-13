@@ -17,18 +17,12 @@ interface ExtractedArticle {
   published_date: string | null;
 }
 
-// All 50 target cities for search queries
+// 19 authorized cities
 const TARGET_CITIES = [
-  "Sangão", "Morro da Fumaça", "Treze de Maio", "Jaguaruna", "Criciúma",
-  "Forquilhinha", "Içara", "Nova Veneza", "Araranguá", "Meleiro",
-  "Cocal do Sul", "Siderópolis", "Lauro Müller", "Orleans", "Tubarão",
-  "Capivari de Baixo", "Imbituba", "Garopaba", "Paulo Lopes", "Palhoça",
-  "Florianópolis", "Governador Celso Ramos", "Itapema", "Balneário Piçarras",
-  "Itajaí", "Navegantes", "Camboriú", "Balneário Camboriú", "Sombrio",
-  "Balneário Arroio do Silva", "Maracajá", "Nova Trento", "Braço do Norte",
-  "São Ludgero", "Grão-Pará", "Santa Rosa de Lima", "Treviso",
-  "Jacinto Machado", "Timbé do Sul", "Pedras Grandes", "Angelina",
-  "Armazém", "Imaruí", "Morro Grande", "Laguna"
+  "Florianópolis", "Joinville", "Blumenau", "Balneário Camboriú", "Itajaí",
+  "São José", "Criciúma", "Chapecó", "Jaraguá do Sul", "Brusque",
+  "Tubarão", "Lages", "Itapema", "Palhoça", "Araranguá",
+  "Sangão", "Morro da Fumaça", "Treze de Maio", "Jaguaruna",
 ];
 
 // ─── Content Cleaning ────────────────────────────────────────────
