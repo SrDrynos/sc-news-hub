@@ -486,7 +486,23 @@ async function processAndSave(
       }
     }
     if (!storedImageUrl) {
-      storedImageUrl = `${supabaseUrl}/storage/v1/object/public/article-images/placeholder-news.jpg`;
+      console.warn(`[Image] Rejected "${article.title}" — no valid image found, sending to recycle`);
+      // Save as recycled instead of rejecting completely
+      const { error } = await supabase.from("articles").insert({
+        id: articleId,
+        title: article.title,
+        excerpt: article.subtitle || "",
+        content: article.subtitle || "",
+        image_url: null,
+        source_url: article.source_url,
+        source_name: article.source_name,
+        author: "Redação Melhor News",
+        score: trustScore,
+        status: "recycled",
+        scraped_at: new Date().toISOString(),
+      });
+      if (error) console.error(`Insert recycled error for "${article.title}":`, error);
+      return false;
     }
 
     // ─── AI: Generate summary + classify category & city ─────────
