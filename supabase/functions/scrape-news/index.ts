@@ -642,14 +642,99 @@ Deno.serve(async (req) => {
 
     // ─── RSS Feeds (from admin "Fontes" page) ────────────────────
     const rssFeeds: { url: string; name: string; trustScore: number }[] = [];
+    const noRssSources: { url: string; name: string; trustScore: number }[] = [];
     for (const s of sources) {
       if (s.rss_url) rssFeeds.push({ url: s.rss_url, name: s.name, trustScore: s.trust_score || 5 });
+      else noRssSources.push({ url: s.url, name: s.name, trustScore: s.trust_score || 5 });
     }
 
     const rssPromises = rssFeeds.map((feed) => fetchRSSArticles(feed.url, feed.name));
     const rssResults = await Promise.all(rssPromises);
     for (let i = 0; i < rssResults.length; i++) {
       for (const a of rssResults[i]) allArticles.push({ article: a, trustScore: rssFeeds[i].trustScore });
+    }
+
+    // ─── Firecrawl: scrape homepages of sources without RSS ──────
+    if (firecrawlKey && noRssSources.length > 0) {
+      for (const src of noRssSources) {
+        try {
+          console.log(`[Firecrawl-Homepage] Scraping ${src.name}: ${src.url}`);
+          const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ url: src.url, formats: ["links", "markdown"], onlyMainContent: true }),
+          });
+          if (!res.ok) { console.error(`[Firecrawl-Homepage] Error ${res.status} for ${src.name}`); continue; }
+          const data = await res.json();
+          const links: string[] = data.data?.links || data.links || [];
+          const markdown: string = data.data?.markdown || data.markdown || "";
+
+          // Extract article links from homepage (filter to same domain, skip category/tag pages)
+          const baseDomain = new URL(src.url).hostname;
+          const articleLinks = links.filter(link => {
+            try {
+              const u = new URL(link);
+              if (u.hostname !== baseDomain) return false;
+              const path = u.pathname.toLowerCase();
+              // Skip non-article pages
+              if (path === "/" || path.length < 10) return false;
+              if (/\/(tag|categoria|category|autor|author|page|feed|wp-|login|contato|sobre|guia|app)\//i.test(path)) return false;
+              return true;
+            } catch { return false; }
+          }).slice(0, 10); // Max 10 articles per source
+
+          console.log(`[Firecrawl-Homepage] Found ${articleLinks.length} article links from ${src.name}`);
+
+          // Scrape each article link
+          for (const articleUrl of articleLinks) {
+            try {
+              const artRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ url: articleUrl, formats: ["markdown", "html"], onlyMainContent: true }),
+              });
+              if (!artRes.ok) continue;
+              const artData = await artRes.json();
+              const artMarkdown = artData.data?.markdown || artData.markdown || "";
+              const artHtml = artData.data?.html || artData.html || "";
+              const metadata = artData.data?.metadata || artData.metadata || {};
+
+              const title = cleanTitle(metadata.title || "");
+              if (!title || title.length < 15) continue;
+
+              // Extract first valid image from HTML
+              let imageUrl: string | null = null;
+              const imgMatches = artHtml.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+              for (const m of imgMatches) {
+                const imgSrc = m[1];
+                if (isValidImageUrl(imgSrc) && !imgSrc.includes("data:image")) {
+                  imageUrl = imgSrc.startsWith("http") ? imgSrc : new URL(imgSrc, articleUrl).href;
+                  break;
+                }
+              }
+
+              const cleaned = cleanContent(artMarkdown);
+              allArticles.push({
+                article: {
+                  title,
+                  subtitle: (metadata.description || "").substring(0, 300),
+                  content: cleaned,
+                  image_url: imageUrl,
+                  source_url: articleUrl,
+                  source_name: src.name,
+                  author: metadata.author || null,
+                  published_date: metadata.publishedTime || metadata.date || null,
+                },
+                trustScore: src.trustScore,
+              });
+            } catch (artErr) {
+              console.warn(`[Firecrawl-Homepage] Error scraping article ${articleUrl}:`, artErr);
+            }
+          }
+        } catch (err) {
+          console.error(`[Firecrawl-Homepage] Error for ${src.name}:`, err);
+        }
+      }
     }
 
     // ─── NewsAPI: busca por cidade ──────────────────────────────────
