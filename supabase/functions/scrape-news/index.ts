@@ -400,7 +400,6 @@ async function processAndSave(
       return false;
     }
     article.source_name = sourceName;
-    }
 
     // REGRA: Check if article is about SC region (target cities OR generic SC mentions)
     const fullText = `${article.title} ${article.subtitle} ${article.content}`;
