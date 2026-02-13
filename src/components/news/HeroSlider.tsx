@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
-const PLACEHOLDER_IMAGE = "/images/placeholder-news.jpg";
+// No placeholder — only original source images
 
 const HeroSlider = () => {
   const todayStart = new Date();
@@ -48,7 +48,7 @@ const HeroSlider = () => {
   }, [sliderArticles.length]);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+    (e.target as HTMLImageElement).style.display = "none";
   };
 
   const formatDate = (date: string | null) => {
@@ -184,13 +184,17 @@ const HeroSlider = () => {
               <Link key={news.id} to={`/noticia/${news.slug || news.id}`} className="group block">
                 <article className="bg-card rounded-lg overflow-hidden shadow-sm flex gap-3 p-3 hover:shadow-md transition-shadow">
                   <div className="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 rounded overflow-hidden bg-muted">
-                    <img
-                      src={news.image_url || PLACEHOLDER_IMAGE}
-                      alt={news.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={handleImageError}
-                    />
+                    {news.image_url ? (
+                      <img
+                        src={news.image_url}
+                        alt={news.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={handleImageError}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <span className={`category-badge category-badge-${(news as any).categories?.slug || "geral"} mb-1 text-[10px]`}>
