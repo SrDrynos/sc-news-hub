@@ -1,5 +1,5 @@
 import Layout from "@/components/layout/Layout";
-import FeaturedNews from "@/components/news/FeaturedNews";
+import HeroSlider from "@/components/news/HeroSlider";
 import CategorySection from "@/components/news/CategorySection";
 import Newsletter from "@/components/news/Newsletter";
 import Sidebar from "@/components/news/Sidebar";
@@ -16,7 +16,7 @@ const Index = () => {
         </div>
       </div>
 
-      <FeaturedNews />
+      <HeroSlider />
 
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
