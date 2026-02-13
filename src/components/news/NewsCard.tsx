@@ -93,11 +93,6 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
         {news.image_url ? (
           <div className="news-card-image aspect-video bg-muted relative">
             <img src={news.image_url} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
-            {news.source_name && (
-              <span className="absolute bottom-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">
-                Imagem: {news.source_name}
-              </span>
-            )}
           </div>
         ) : (
           <div className={`aspect-video ${NO_IMAGE_GRADIENT} flex items-center justify-center`}>
