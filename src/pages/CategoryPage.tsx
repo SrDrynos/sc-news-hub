@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import NewsCard from "@/components/news/NewsCard";
 import Sidebar from "@/components/news/Sidebar";
+import AdSlot from "@/components/ads/AdSlot";
 import { usePublishedArticles, useCategories, useRegions } from "@/hooks/useArticles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,7 +54,9 @@ const CategoryPage = () => {
   return (
     <Layout>
       <div className="bg-muted py-4">
-        <div className="container"><div className="ad-banner-top"><span>Anúncio 728x90</span></div></div>
+        <div className="container">
+          <AdSlot position="leaderboard_top" className="hidden md:flex" />
+        </div>
       </div>
 
       <div className="container py-8">
@@ -96,7 +99,7 @@ const CategoryPage = () => {
             ) : articles.length > 0 ? (
               <div className="space-y-6">
                 <div className="mb-8"><NewsCard news={articles[0] as any} /></div>
-                <div className="my-8"><div className="ad-banner h-[250px]"><span>Anúncio Responsivo</span></div></div>
+                <AdSlot position="content_1" className="my-8" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {articles.slice(1).map((article) => <NewsCard key={article.id} news={article as any} />)}
                 </div>
