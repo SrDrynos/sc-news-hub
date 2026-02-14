@@ -13,7 +13,7 @@ const Index = () => {
     <Layout>
       <div className="bg-muted py-4">
         <div className="container">
-          <AdSlot position="leaderboard_top" className="hidden md:flex" />
+          <AdSlot position="leaderboard_top" />
         </div>
       </div>
 
@@ -22,7 +22,7 @@ const Index = () => {
       {/* Ad after hero */}
       <div className="bg-muted py-4">
         <div className="container">
-          <AdSlot position="after_hero" className="hidden md:flex" />
+          <AdSlot position="after_hero" />
         </div>
       </div>
 
@@ -63,7 +63,7 @@ const Index = () => {
       {/* Ad before newsletter */}
       <div className="bg-muted py-4">
         <div className="container">
-          <AdSlot position="before_newsletter" className="hidden md:flex" />
+          <AdSlot position="before_newsletter" />
         </div>
       </div>
 

@@ -55,7 +55,7 @@ const CategoryPage = () => {
     <Layout>
       <div className="bg-muted py-4">
         <div className="container">
-          <AdSlot position="leaderboard_top" className="hidden md:flex" />
+          <AdSlot position="leaderboard_top" />
         </div>
       </div>
 
