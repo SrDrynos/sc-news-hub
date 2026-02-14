@@ -442,6 +442,15 @@ async function processAndSave(
   try {
     if (!article.title || article.title.length < 10) return false;
 
+    // REGRA: Rejeitar URLs de vídeo (YouTube, páginas /video/)
+    if (article.source_url) {
+      const urlLower = article.source_url.toLowerCase();
+      if (urlLower.includes("youtube.com") || urlLower.includes("youtu.be") || /\/video\//.test(urlLower)) {
+        console.warn(`Rejected "${article.title}" — video URL not supported`);
+        return false;
+      }
+    }
+
     // REGRA: Rejeitar títulos com caracteres corrompidos (encoding quebrado)
     if (/[\uFFFD]|â€|Ã©|Ã£|Ã§|Ã¡|Ã³|Ãº|Ã­/.test(article.title)) {
       console.warn(`Rejected "${article.title}" — corrupted characters detected`);
@@ -455,6 +464,25 @@ async function processAndSave(
       return false;
     }
     article.source_name = sourceName;
+
+    // REGRA: Rejeitar conteúdo com lixo de UI (YouTube, cookies, navegação)
+    const combinedText = `${article.subtitle} ${article.content}`;
+    const garbagePatterns = [
+      /youtube.*subscribers/i,
+      /tap to unmute/i,
+      /playback.*begin shortly/i,
+      /watch full video/i,
+      /Revisit consent button/i,
+      /Valorizamos sua privacidade.*cookies/i,
+      /FacebookInstagramMailTwitterYoutube/i,
+      /Photo image of.*\d+K? subscribers/i,
+      /autoplay is paused/i,
+      /retrieving sharing information/i,
+    ];
+    if (garbagePatterns.some(p => p.test(combinedText))) {
+      console.warn(`Rejected "${article.title}" — garbage UI content detected`);
+      return false;
+    }
 
     // REGRA: Check if article is about SC region (target cities OR generic SC mentions)
     const fullText = `${article.title} ${article.subtitle} ${article.content}`;

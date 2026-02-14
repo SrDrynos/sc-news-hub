@@ -133,6 +133,26 @@ Deno.serve(async (req) => {
         problems.push("title_too_short");
       }
 
+      // 6. Garbage UI content (YouTube, cookies, navigation menus)
+      const textToCheck = `${article.excerpt || ""} ${article.content || ""}`;
+      const garbagePatterns = [
+        /youtube.*subscribers/i,
+        /tap to unmute/i,
+        /playback.*begin shortly/i,
+        /watch full video/i,
+        /Revisit consent button/i,
+        /Valorizamos sua privacidade.*cookies/i,
+        /FacebookInstagramMailTwitterYoutube/i,
+        /Photo image of.*\d+K? subscribers/i,
+        /autoplay is paused/i,
+        /retrieving sharing information/i,
+        /watch later.*share.*copy link/i,
+        /You're signed out.*Videos you watch/i,
+      ];
+      if (garbagePatterns.some(p => p.test(textToCheck))) {
+        problems.push("garbage_ui_content");
+      }
+
       if (problems.length > 0) {
         toRecycle.push(article.id);
         reasons[article.id] = problems.join(", ");
