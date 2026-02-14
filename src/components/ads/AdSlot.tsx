@@ -39,7 +39,6 @@ const AdSlot = ({ position, className = "" }: AdSlotProps) => {
   const width = slotConfig?.size?.[0] || sizeConfig?.width;
   const height = slotConfig?.size?.[1] || sizeConfig?.height;
 
-  // Use the ad slot ID if configured in admin, otherwise use "auto"
   const adSlotId = slotConfig?.ad_slot_id || "";
 
   useEffect(() => {
@@ -61,15 +60,16 @@ const AdSlot = ({ position, className = "" }: AdSlotProps) => {
       <ins
         className="adsbygoogle"
         style={{
-          display: "inline-block",
-          width: `${width}px`,
-          maxWidth: "100%",
-          height: `${height}px`,
+          display: "block",
+          width: "100%",
+          maxWidth: `${width}px`,
+          minHeight: `${Math.min(height, 100)}px`,
+          height: "auto",
         }}
         data-ad-client={publisherId}
         data-ad-slot={adSlotId || undefined}
-        data-ad-format={adSlotId ? undefined : "rectangle"}
-        data-full-width-responsive={adSlotId ? undefined : "false"}
+        data-ad-format={adSlotId ? undefined : "auto"}
+        data-full-width-responsive="true"
       />
     </div>
   );

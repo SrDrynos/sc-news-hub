@@ -103,7 +103,7 @@ const ArticlePage = () => {
 
       <div className="container py-8">
         {/* Leaderboard top ad */}
-        <AdSlot position="leaderboard_top" className="mb-6 hidden md:flex" />
+        <AdSlot position="leaderboard_top" className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* ═══════════ ARTIGO ═══════════ */}
@@ -215,7 +215,7 @@ const ArticlePage = () => {
             </div>
 
             {/* 9. Ad below article */}
-            <AdSlot position="below_article" className="my-6 hidden md:flex" />
+            <AdSlot position="below_article" className="my-6" />
 
             {/* 10. Compartilhamento */}
             <div className="py-4 border-t border-border mb-8">
