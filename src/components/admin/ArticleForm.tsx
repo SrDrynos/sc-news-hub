@@ -179,6 +179,12 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         <Input placeholder="https://..." value={data.source_url || ""} onChange={(e) => onChange({ ...data, source_url: e.target.value })} />
       </div>
 
+      {/* Cidade */}
+      <div>
+        <Label>Cidade * <span className="text-destructive text-xs">obrigatório</span> <span className="text-muted-foreground text-xs">(onde a notícia aconteceu)</span></Label>
+        <Input placeholder="Ex: Florianópolis - SC" value={data.city || ""} onChange={(e) => onChange({ ...data, city: e.target.value })} className={!data.city ? "border-destructive" : ""} />
+      </div>
+
       {/* Auditoria Editorial */}
       <AuditPanel article={data} />
 
