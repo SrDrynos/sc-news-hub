@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Recycle, Settings, Users,
-  Globe, FolderOpen, MapPin, LogOut, Home, Rss, Handshake
+  Globe, FolderOpen, LogOut, Home, Rss, Handshake
 } from "lucide-react";
 
 const navItems = [
@@ -13,7 +13,6 @@ const navItems = [
   { label: "Reciclagem", path: "/admin/reciclagem", icon: Recycle },
   { label: "Fontes", path: "/admin/fontes", icon: Globe },
   { label: "Categorias", path: "/admin/categorias", icon: FolderOpen },
-  { label: "Regiões", path: "/admin/regioes", icon: MapPin },
   { label: "RSS Feeds", path: "/admin/rss", icon: Rss },
   { label: "Parceiros", path: "/admin/parceiros", icon: Handshake },
   { label: "Usuários", path: "/admin/usuarios", icon: Users, adminOnly: true },

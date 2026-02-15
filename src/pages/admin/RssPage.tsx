@@ -1,4 +1,4 @@
-import { useCategories, useRegions } from "@/hooks/useArticles";
+import { useCategories } from "@/hooks/useArticles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Rss, Copy } from "lucide-react";
@@ -9,7 +9,6 @@ const BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rss-feed`;
 
 const RssPage = () => {
   const { data: categories = [] } = useCategories();
-  const { data: regions = [] } = useRegions();
   const { toast } = useToast();
 
   const copy = (url: string) => {
@@ -41,8 +40,7 @@ const RssPage = () => {
         Os feeds RSS são gerados automaticamente e atualizados a cada 3 minutos (cache).
       </p>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Global */}
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-lg">Feed Global</CardTitle></CardHeader>
           <CardContent>
@@ -50,22 +48,11 @@ const RssPage = () => {
           </CardContent>
         </Card>
 
-        {/* Per Category */}
         <Card>
           <CardHeader><CardTitle className="text-lg">Por Categoria</CardTitle></CardHeader>
           <CardContent>
             {(categories as any[]).map((c) => (
               <RssLink key={c.id} label={c.name} url={`${BASE}?type=category&slug=${c.slug}`} />
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Per City */}
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Por Cidade</CardTitle></CardHeader>
-          <CardContent>
-            {(regions as any[]).map((r) => (
-              <RssLink key={r.id} label={r.name} url={`${BASE}?type=city&slug=${r.slug}`} />
             ))}
           </CardContent>
         </Card>

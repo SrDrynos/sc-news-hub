@@ -1,36 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield, ChevronDown } from "lucide-react";
+import { Menu, X, Search, Facebook, Instagram, Youtube, Twitter, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRegions, useSystemSettings } from "@/hooks/useArticles";
+import { useCategories, useSystemSettings } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 import AdSlot from "@/components/ads/AdSlot";
-
-// Ordem fixa obrigatória das cidades no menu Regional
-const REGIONAL_ORDER = [
-  "Sombrio", "Araranguá", "Criciúma", "Içara", "Morro da Fumaça",
-  "Sangão", "Treze de Maio", "Jaguaruna", "Tubarão", "Laguna",
-  "Florianópolis", "Balneário Camboriú",
-];
-
-function sortRegions(regions: any[]): any[] {
-  const ordered: any[] = [];
-  for (const name of REGIONAL_ORDER) {
-    const found = regions.find((r) => r.name === name);
-    if (found) ordered.push(found);
-  }
-  // Append remaining cities after the fixed list
-  for (const r of regions) {
-    if (!REGIONAL_ORDER.includes(r.name)) ordered.push(r);
-  }
-  return ordered;
-}
 
 // MENU OFICIAL FIXO – 8 itens, ordem obrigatória
 const MENU_ITEMS = [
   { label: "Início", to: "/" },
-  { label: "Regional", to: "/categoria/cidades", hasDropdown: true },
+  { label: "Regional", to: "/categoria/cidades" },
   { label: "Economia", to: "/categoria/economia" },
   { label: "Educação", to: "/categoria/educacao" },
   { label: "Política", to: "/categoria/politica" },
@@ -41,11 +21,9 @@ const MENU_ITEMS = [
 
 const Header = () => {
   const { isStaff } = useAuth();
-  const { data: regions = [] } = useRegions();
   const { data: settings } = useSystemSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isRegionalOpen, setIsRegionalOpen] = useState(false);
 
   const branding = (settings?.branding as any) || {};
   const logoUrl = branding.logo_light_url;
@@ -95,34 +73,13 @@ const Header = () => {
           <div className="hidden lg:flex items-center justify-between">
             <ul className="flex items-center">
               {MENU_ITEMS.map((item) => (
-                <li key={item.label} className={item.hasDropdown ? "relative group" : ""}>
-                  {item.hasDropdown ? (
-                    <>
-                      <Link
-                        to={item.to}
-                        className="flex items-center gap-1 px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap"
-                      >
-                        {item.label}
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </Link>
-                      <ul className="absolute left-0 top-full min-w-[220px] bg-card shadow-lg rounded-b-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[400px] overflow-y-auto">
-                        {sortRegions(regions as any[]).map((r) => (
-                          <li key={r.id}>
-                            <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                              {r.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  ) : (
-                    <Link
-                      to={item.to}
-                      className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap"
-                    >
-                      {item.label}
-                    </Link>
-                  )}
+                <li key={item.label}>
+                  <Link
+                    to={item.to}
+                    className="block px-4 py-3 text-primary-foreground font-medium hover:bg-secondary transition-colors whitespace-nowrap"
+                  >
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -142,32 +99,9 @@ const Header = () => {
               <ul className="space-y-1">
                 {MENU_ITEMS.map((item) => (
                   <li key={item.label}>
-                    {item.hasDropdown ? (
-                      <>
-                        <button
-                          onClick={() => setIsRegionalOpen(!isRegionalOpen)}
-                          className="flex items-center justify-between w-full px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium"
-                        >
-                          {item.label}
-                          <ChevronDown className={`h-4 w-4 transition-transform ${isRegionalOpen ? "rotate-180" : ""}`} />
-                        </button>
-                        {isRegionalOpen && (
-                          <ul className="ml-4 space-y-1">
-                            {sortRegions(regions as any[]).map((r) => (
-                              <li key={r.id}>
-                                <Link to={`/categoria/cidades?regiao=${r.slug}`} className="block px-4 py-2 text-primary-foreground/80 hover:bg-secondary rounded-md transition-colors text-sm" onClick={() => setIsMenuOpen(false)}>
-                                  {r.name}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    ) : (
-                      <Link to={item.to} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
-                        {item.label}
-                      </Link>
-                    )}
+                    <Link to={item.to} className="block px-4 py-3 text-primary-foreground hover:bg-secondary rounded-md transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
