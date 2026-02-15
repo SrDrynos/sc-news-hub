@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const SITE_URL = "https://melhornews.com.br";
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const API_BASE = "https://api.melhornews.com.br";
 
 function getCategoryLabel(cat?: { name: string } | null): string {
   return (cat?.name || "GERAL").toUpperCase();
@@ -29,7 +29,7 @@ function buildArticleUrl(slug: string | null, id: string): string {
 
 // Social share URL — serves proper OG meta tags for crawlers, then redirects
 function buildShareUrl(slug: string | null, id: string): string {
-  return `${SUPABASE_URL}/functions/v1/social-share?slug=${encodeURIComponent(slug || id)}`;
+  return `${API_BASE}/functions/v1/social-share?slug=${encodeURIComponent(slug || id)}`;
 }
 
 // ─── Social text generators ───────────────────────────────────
