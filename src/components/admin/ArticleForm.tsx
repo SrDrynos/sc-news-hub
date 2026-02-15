@@ -77,6 +77,12 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         <Input placeholder="Título otimizado para SEO" value={data.title} onChange={(e) => onChange({ ...data, title: e.target.value })} />
       </div>
 
+      {/* Subtítulo */}
+      <div>
+        <Label>Subtítulo <span className="text-muted-foreground text-xs">(aparece abaixo do título na página)</span></Label>
+        <Input placeholder="Subtítulo descritivo da notícia" value={data.subtitle || ""} onChange={(e) => onChange({ ...data, subtitle: e.target.value })} />
+      </div>
+
       {/* Meta Description */}
       <div>
         <Label>Meta Description <span className={`text-xs ${metaColor}`}>({metaLen}/160)</span></Label>
