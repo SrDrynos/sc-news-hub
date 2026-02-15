@@ -8,13 +8,13 @@ const corsHeaders = {
 
 // Ad/banner exclusion patterns
 const AD_EXCLUDE = [
-  "logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "ad-", "/ad/",
+  "logo", "icon", "favicon", "avatar", "banner-ad", "/ads/", "ad-server",
   "adserver", "doubleclick", "googlesyndication", "adsense", "pixel",
   "tracking", "button", "badge", "sprite", "widget", "selo", "stamp",
   "watermark", "brand", "header-img", "site-logo", "default-image",
   "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.",
   "transparent.", "spinner", "loading", "guia", "anuncio", "anunci",
-  "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "banner",
+  "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "banner-",
   "classified", "popup", "overlay",
 ];
 
@@ -197,16 +197,42 @@ Deno.serve(async (req) => {
         metadata.image ||
         metadata.twitterImage ||
         metadata["twitter:image"];
+      
+      console.log(`[fix-images] og:image value for "${article.title}": ${ogImage} (type: ${typeof ogImage}, valid: ${isValidOgImage(typeof ogImage === 'string' ? ogImage : '')})`);
+      
+      // Handle ogImage being an object (Firecrawl sometimes returns {url: "..."})
+      let resolvedOgImage: string | null = null;
+      if (typeof ogImage === 'string') {
+        resolvedOgImage = ogImage;
+      } else if (ogImage && typeof ogImage === 'object' && (ogImage as any).url) {
+        resolvedOgImage = (ogImage as any).url;
+      }
+      
+      // If no og:image in metadata, try to find images in HTML
+      let finalImageUrl = resolvedOgImage;
+      if (!finalImageUrl || !isValidOgImage(finalImageUrl)) {
+        const html = data.data?.html || data.html || "";
+        // Try to find first valid img in HTML
+        const imgMatches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)];
+        for (const m of imgMatches) {
+          const src = m[1];
+          if (!src.includes("data:image") && isValidOgImage(src)) {
+            finalImageUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
+            console.log(`[fix-images] Found HTML img for "${article.title}": ${finalImageUrl}`);
+            break;
+          }
+        }
+      }
 
-      if (!ogImage || !isValidOgImage(ogImage)) {
+      if (!finalImageUrl || !isValidOgImage(finalImageUrl)) {
         console.log(`[fix-images] No valid og:image for "${article.title}" — skipping`);
         skipped++;
         continue;
       }
 
-      const absUrl = ogImage.startsWith("http")
-        ? ogImage
-        : new URL(ogImage, article.source_url).href;
+      const absUrl = finalImageUrl.startsWith("http")
+        ? finalImageUrl
+        : new URL(finalImageUrl, article.source_url).href;
 
       // Download and replace
       const newUrl = await downloadAndStore(absUrl, article.id, supabase, supabaseUrl);
