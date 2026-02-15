@@ -59,7 +59,7 @@ serve(async (req) => {
 
     const results: any[] = [];
 
-    for (const article of shortArticles) {
+    for (const article of needsEnrichment) {
       try {
         if (!article.source_url) {
           results.push({ id: article.id, status: "skipped", reason: "no source_url" });
@@ -85,21 +85,31 @@ serve(async (req) => {
           continue;
         }
 
-        // Step 2: Generate summary with AI
+        // Step 2: Determine what this article needs
+        const text = (article.content || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        const wordCount = text.split(/\s+/).filter(Boolean).length;
+        const needsContent = wordCount < 300;
+        const needsTags = !Array.isArray(article.tags) || article.tags.length !== 7;
+
+        // Step 3: Generate content with AI (if needed)
         if (!lovableKey) {
           results.push({ id: article.id, status: "skipped", reason: "no LOVABLE_API_KEY" });
           continue;
         }
 
-        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
-            messages: [
-              {
-                role: "system",
-                content: `Você é um redator jornalístico profissional brasileiro. Sua tarefa é criar um resumo informativo e fiel de uma notícia.
+        let newContent = article.content;
+        let generatedTags: string[] = [];
+
+        if (needsContent) {
+          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content: `Você é um redator jornalístico profissional brasileiro. Sua tarefa é criar um resumo informativo e fiel de uma notícia.
 
 REGRAS OBRIGATÓRIAS:
 - O resumo deve ter NO MÍNIMO 300 palavras e NO MÁXIMO 500 palavras
@@ -112,51 +122,102 @@ REGRAS OBRIGATÓRIAS:
 - Use HTML para formatar: <p> para parágrafos
 - Comece direto com os fatos, sem frases introdutórias genéricas
 - Inclua dados específicos: nomes, datas, locais, números quando disponíveis na fonte`,
-              },
-              {
-                role: "user",
-                content: `Título da notícia: ${article.title}
+                },
+                {
+                  role: "user",
+                  content: `Título da notícia: ${article.title}
 
 Conteúdo original da fonte:
 ${sourceContent.substring(0, 8000)}
 
 Crie um resumo jornalístico de NO MÍNIMO 300 palavras baseado exclusivamente nesta fonte.`,
-              },
-            ],
-          }),
-        });
+                },
+              ],
+            }),
+          });
 
-        if (!aiRes.ok) {
-          const errText = await aiRes.text();
-          results.push({ id: article.id, status: "error", reason: `AI ${aiRes.status}: ${errText.substring(0, 200)}` });
-          continue;
+          if (!aiRes.ok) {
+            const errText = await aiRes.text();
+            results.push({ id: article.id, status: "error", reason: `AI ${aiRes.status}: ${errText.substring(0, 200)}` });
+            continue;
+          }
+
+          const aiData = await aiRes.json();
+          newContent = aiData?.choices?.[0]?.message?.content || "";
+
+          const newWordCount = newContent.replace(/<[^>]+>/g, " ").trim().split(/\s+/).filter(Boolean).length;
+          if (newWordCount < 200) {
+            results.push({ id: article.id, status: "skipped", reason: `AI generated only ${newWordCount} words` });
+            continue;
+          }
         }
 
-        const aiData = await aiRes.json();
-        const newContent = aiData?.choices?.[0]?.message?.content || "";
+        // Step 4: Generate tags if missing
+        if (needsTags) {
+          const tagRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content: "Você gera keywords SEO para artigos de notícias de Santa Catarina. Responda APENAS com JSON válido.",
+                },
+                {
+                  role: "user",
+                  content: `Gere exatamente 7 tags/keywords SEO para este artigo:
+Título: ${article.title}
+Cidade: ${article.city || "não informada"}
+Conteúdo: ${(newContent || "").replace(/<[^>]+>/g, " ").substring(0, 1500)}
 
-        const newWordCount = newContent.replace(/<[^>]+>/g, " ").trim().split(/\s+/).filter(Boolean).length;
-        if (newWordCount < 200) {
-          results.push({ id: article.id, status: "skipped", reason: `AI generated only ${newWordCount} words` });
-          continue;
+Regras:
+- Inclua obrigatoriamente a cidade e "Santa Catarina"
+- Termos relevantes e pesquisáveis (1-3 palavras cada)
+- NÃO repita o título, NÃO use termos genéricos
+
+Responda APENAS com JSON: {"tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7"]}`,
+                },
+              ],
+            }),
+          });
+
+          if (tagRes.ok) {
+            try {
+              const tagData = await tagRes.json();
+              let tagJson = (tagData?.choices?.[0]?.message?.content || "").trim();
+              if (tagJson.startsWith("```")) tagJson = tagJson.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+              const parsed = JSON.parse(tagJson);
+              if (Array.isArray(parsed.tags)) {
+                generatedTags = parsed.tags.filter((t: any) => typeof t === "string" && t.trim().length > 0).map((t: string) => t.trim()).slice(0, 7);
+              }
+            } catch { console.warn(`[Tags] Failed to parse tags for ${article.id}`); }
+          }
         }
 
-        // Step 3: Also generate subtitle if missing
+        // Step 5: Also generate subtitle if missing
         let subtitle = article.subtitle;
         if (!subtitle && newContent) {
-          const plainText = newContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          const plainText = (newContent || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
           subtitle = plainText.substring(0, 200).replace(/\.\s+[^.]*$/, ".");
         }
 
-        // Step 4: Update article
-        const updateData: any = { content: newContent };
+        // Step 6: Update article
+        const updateData: any = {};
+        if (needsContent && newContent) updateData.content = newContent;
         if (subtitle && !article.subtitle) updateData.subtitle = subtitle;
+        if (generatedTags.length === 7) updateData.tags = generatedTags;
+
+        if (Object.keys(updateData).length === 0) {
+          results.push({ id: article.id, status: "skipped", reason: "nothing to update" });
+          continue;
+        }
 
         const { error: updateErr } = await sb.from("articles").update(updateData).eq("id", article.id);
         if (updateErr) {
           results.push({ id: article.id, status: "error", reason: updateErr.message });
         } else {
-          results.push({ id: article.id, status: "enriched", title: article.title, new_word_count: newWordCount });
+          results.push({ id: article.id, status: "enriched", title: article.title, tags_added: !!updateData.tags, content_updated: !!updateData.content });
         }
 
         // Small delay between articles to avoid rate limits
