@@ -22,6 +22,7 @@ const TARGET_CITIES = [
   "Florianópolis", "Joinville", "Blumenau", "Balneário Camboriú", "Itajaí",
   "São José", "Criciúma", "Chapecó", "Jaraguá do Sul", "Brusque",
   "Tubarão", "Lages", "Itapema", "Palhoça", "Araranguá",
+  "Sombrio", "Içara", "Balneário Rincão",
   "Sangão", "Morro da Fumaça", "Treze de Maio", "Jaguaruna",
 ];
 
@@ -977,54 +978,48 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── NewsAPI: busca por cidade ──────────────────────────────────
+    // ─── NewsAPI: busca PARALELA por TODAS as cidades ──────────────
     const newsApiKey = Deno.env.get("NEWS_API_KEY");
     if (newsApiKey) {
-      const cityQueries = TARGET_CITIES.map(city => `"${city}" Santa Catarina`);
-      // Batch into groups to avoid rate limits
-      const batchSize = 5;
-      for (let i = 0; i < cityQueries.length; i += batchSize) {
-        const batch = cityQueries.slice(i, i + batchSize);
-        const apiPromises = batch.map(async (query, idx) => {
-          try {
-            const cityName = TARGET_CITIES[i + idx];
-            const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=pt&sortBy=publishedAt&pageSize=5&apiKey=${newsApiKey}`;
-            const res = await fetch(url);
-            if (!res.ok) { console.error(`[NewsAPI] Error for ${cityName}: ${res.status}`); return; }
-            const data = await res.json();
-            if (data.articles?.length) {
-              console.log(`[NewsAPI] Found ${data.articles.length} articles for ${cityName}`);
-              for (const a of data.articles) {
-                if (!a.title || a.title === "[Removed]") continue;
-                allArticles.push({
-                  article: {
-                    title: cleanTitle(a.title),
-                    subtitle: a.description || "",
-                    content: a.content || a.description || "",
-                    image_url: a.urlToImage || null,
-                    source_url: a.url,
-                    source_name: a.source?.name || "NewsAPI",
-                    author: a.author || null,
-                    published_date: a.publishedAt || null,
-                  },
-                  trustScore: 6,
-                });
-              }
+      const newsApiPromises = TARGET_CITIES.map(async (cityName) => {
+        try {
+          const query = `"${cityName}" Santa Catarina`;
+          const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=pt&sortBy=publishedAt&pageSize=5&apiKey=${newsApiKey}`;
+          const res = await fetch(url);
+          if (!res.ok) { console.error(`[NewsAPI] Error for ${cityName}: ${res.status}`); return; }
+          const data = await res.json();
+          if (data.articles?.length) {
+            console.log(`[NewsAPI] Found ${data.articles.length} articles for ${cityName}`);
+            for (const a of data.articles) {
+              if (!a.title || a.title === "[Removed]") continue;
+              allArticles.push({
+                article: {
+                  title: cleanTitle(a.title),
+                  subtitle: a.description || "",
+                  content: a.content || a.description || "",
+                  image_url: a.urlToImage || null,
+                  source_url: a.url,
+                  source_name: a.source?.name || "NewsAPI",
+                  author: a.author || null,
+                  published_date: a.publishedAt || null,
+                },
+                trustScore: 6,
+              });
             }
-          } catch (err) { console.error(`[NewsAPI] Error:`, err); }
-        });
-        await Promise.all(apiPromises);
-      }
+          }
+        } catch (err) { console.error(`[NewsAPI] Error for ${cityName}:`, err); }
+      });
+      await Promise.all(newsApiPromises);
     }
 
-    // ─── APITube: busca por cidade ──────────────────────────────────
+    // ─── APITube: busca PARALELA por TODAS as cidades ──────────────
     const apitubeKey = Deno.env.get("APITUBE_API_KEY");
     if (apitubeKey) {
-      for (const city of TARGET_CITIES.slice(0, 10)) { // Top 10 cities
+      const apitubePromises = TARGET_CITIES.map(async (city) => {
         try {
           const url = `https://api.apitube.io/v1/news/everything?search=${encodeURIComponent(city + " SC")}&language=pt&limit=5&api_key=${apitubeKey}`;
           const res = await fetch(url);
-          if (!res.ok) { console.error(`[APITube] Error for ${city}: ${res.status}`); continue; }
+          if (!res.ok) { console.error(`[APITube] Error for ${city}: ${res.status}`); return; }
           const data = await res.json();
           const articles = data.results || data.articles || [];
           if (articles.length) {
@@ -1046,7 +1041,8 @@ Deno.serve(async (req) => {
             }
           }
         } catch (err) { console.error(`[APITube] Error for ${city}:`, err); }
-      }
+      });
+      await Promise.all(apitubePromises);
     }
 
     // ─── REGRA 6: Ordenar por data mais recente (prioridade máxima) ─
