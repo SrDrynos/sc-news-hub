@@ -7,20 +7,30 @@ import { useCategories, useSystemSettings } from "@/hooks/useArticles";
 import { useAuth } from "@/hooks/useAuth";
 import AdSlot from "@/components/ads/AdSlot";
 
-// Cidades autorizadas – ordem obrigatória
+// Cidades autorizadas – slugs idênticos ao banco (regions.slug)
 const REGIONAL_CITIES = [
-  { label: "Sombrio", slug: "sombrio" },
-  { label: "Araranguá", slug: "ararangua" },
-  { label: "Criciúma", slug: "criciuma" },
-  { label: "Içara", slug: "icara" },
-  { label: "Morro da Fumaça", slug: "morro-da-fumaca" },
-  { label: "Sangão", slug: "sangao" },
-  { label: "Treze de Maio", slug: "treze-de-maio" },
-  { label: "Jaguaruna", slug: "jaguaruna" },
-  { label: "Tubarão", slug: "tubarao" },
-  { label: "Laguna", slug: "laguna" },
-  { label: "Florianópolis", slug: "florianopolis" },
-  { label: "Balneário Camboriú", slug: "balneario-camboriu" },
+  { label: "Sombrio", slug: "sombrio-sc" },
+  { label: "Araranguá", slug: "ararangua-sc" },
+  { label: "Criciúma", slug: "criciuma-sc" },
+  { label: "Içara", slug: "icara-sc" },
+  { label: "Morro da Fumaça", slug: "morro-da-fumaca-sc" },
+  { label: "Sangão", slug: "sangao-sc" },
+  { label: "Treze de Maio", slug: "treze-de-maio-sc" },
+  { label: "Jaguaruna", slug: "jaguaruna-sc" },
+  { label: "Tubarão", slug: "tubarao-sc" },
+  { label: "Laguna", slug: "laguna-sc" },
+  { label: "Florianópolis", slug: "florianopolis-sc" },
+  { label: "Balneário Camboriú", slug: "bal-camboriu-sc" },
+  { label: "Joinville", slug: "joinville-sc" },
+  { label: "Blumenau", slug: "blumenau-sc" },
+  { label: "Itajaí", slug: "itajai-sc" },
+  { label: "São José", slug: "sao-jose-sc" },
+  { label: "Chapecó", slug: "chapeco-sc" },
+  { label: "Jaraguá do Sul", slug: "jaragua-do-sul-sc" },
+  { label: "Brusque", slug: "brusque-sc" },
+  { label: "Lages", slug: "lages-sc" },
+  { label: "Itapema", slug: "itapema-sc" },
+  { label: "Palhoça", slug: "palhoca-sc" },
 ];
 
 // MENU OFICIAL FIXO – 8 itens, ordem obrigatória
