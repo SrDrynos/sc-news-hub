@@ -102,7 +102,8 @@ function cleanContent(markdown: string): string {
   text = text.replace(/^https?:\/\/\S+$/gm, "");
   text = text.replace(/\n{3,}/g, "\n\n");
   text = text.replace(/^(home|início|sobre|contato|fale conosco|política de privacidade|termos de uso|mapa do site)\s*$/gim, "");
-  return text.trim();
+  // Apply syndication stripping as final pass
+  return stripSyndication(text.trim());
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -281,6 +282,56 @@ function cleanTitle(title: string): string {
   let t = title;
   t = t.replace(/\s*[-|–—]\s*(Notícias|NSC Total|ND\+|G1|UOL|Folha|Diário|Jornal|Portal|Correio|Gazeta|Tribuna|Rádio|TV|SC|Santa Catarina|Semanário).*$/i, "").trim();
   t = t.replace(/\(https?:\/\/[^)]+\)/g, "").replace(/https?:\/\/\S+/g, "").trim();
+  return stripSyndication(t);
+}
+
+// ─── Strip Syndication / Feed Artifacts ──────────────────────────
+function stripSyndication(text: string): string {
+  if (!text) return text;
+  let t = text;
+
+  // 1. Decode HTML entities (&#8211; → –, &nbsp; → space, &raquo; → », etc.)
+  t = t.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+  t = t.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  t = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/&raquo;/g, "»").replace(/&laquo;/g, "«").replace(/&mdash;/g, "—")
+    .replace(/&ndash;/g, "–").replace(/&hellip;/g, "…").replace(/&copy;/g, "©")
+    .replace(/&reg;/g, "®").replace(/&trade;/g, "™").replace(/&bull;/g, "•");
+
+  // 2. Remove "appeared first on ..." / "The post ... appeared first on ..."
+  t = t.replace(/\s*[\n.]*\s*The\s+post\s+.*?appeared\s+first\s+on\s+.*$/gis, "");
+  t = t.replace(/\s*[\n.]*\s*appeared\s+first\s+on\s+.*$/gis, "");
+  t = t.replace(/\s*[\n.]*\s*O\s+post\s+.*?apareceu\s+primeiro\s+em\s+.*$/gis, "");
+
+  // 3. Remove "Leia no portal..." / "Leia mais em..." / "➜ Leia no..."
+  t = t.replace(/\s*[➜→▸►]?\s*Leia\s+(no|mais\s+em|na|em)\s+[^.]*?(Portal|News|Jornal|Site|Blog|Página)[^.]*\.?/gi, "");
+  t = t.replace(/\s*[➜→▸►]?\s*Leia\s+(no|mais\s+em|na|em)\s+.*$/gim, "");
+  t = t.replace(/\s*[➜→▸►]\s*Leia\s+.*$/gim, "");
+
+  // 4. Remove "Fonte: ..." / "Publicado originalmente em ..." lines
+  t = t.replace(/\s*Fonte:\s*[^\n]+/gi, "");
+  t = t.replace(/\s*Publicado\s+originalmente\s+em\s*[^\n]*/gi, "");
+  t = t.replace(/\s*Originalmente\s+publicado\s+em\s*[^\n]*/gi, "");
+  t = t.replace(/\s*Reprodução\s*:\s*[^\n]*/gi, "");
+  t = t.replace(/\s*Crédito(s)?:\s*[^\n]*/gi, "");
+
+  // 5. Remove aggregator/CMS signatures
+  t = t.replace(/\s*[-–—|]\s*(Sulinfoco|SulInFoco|Engeplus|SCTODODIA|SC Todo Dia|Notisul|Folha do Sul|OCP News|ND Mais|NSC Total|Informe Blumenau|Rádio Tubá|Diário do Litoral|Portal Sulsc|FloripaNEWS|Jornal Palhocense|Folha Regional|CLMais|Correio Lageano|Visor Notícias|Semanário|Conecta SC|Agora na Cidade|Içara News|Araranews|Marazul|BlumenEWS|Portal Agora|Jovem Pan)\s*\.?\s*$/gi, "");
+  
+  // 6. Remove leftover redirect blocks
+  t = t.replace(/\s*Saiba\s+mais\s*:?\s*$/gi, "");
+  t = t.replace(/\s*Confira\s+(a\s+)?matéria\s+completa\s*:?\s*$/gi, "");
+  t = t.replace(/\s*Acesse\s+(o\s+)?(site|portal)\s+.*$/gim, "");
+  t = t.replace(/\s*Clique\s+(aqui|no\s+link)\s+.*$/gim, "");
+
+  // 7. Remove ➜ / → arrows with any trailing text at end of string
+  t = t.replace(/\s*[➜→▸►]\s+.*$/gm, "");
+
+  // 8. Clean excessive whitespace and trailing punctuation
+  t = t.replace(/\n{3,}/g, "\n\n").replace(/\s{2,}/g, " ").trim();
+  t = t.replace(/[\s.,:;!?\-–—]+$/, "").trim();
+
   return t;
 }
 
@@ -883,15 +934,21 @@ async function processAndSave(
     }
 
     // REGRA 7: NUNCA copiar matéria completa — content = resumo apenas
+    // REGRA: Strip syndication artifacts from all text fields before saving
+    const cleanedTitle = stripSyndication(article.title);
+    const cleanedSubtitle = stripSyndication(subtitle || "");
+    const cleanedExcerpt = stripSyndication(excerpt);
+    const cleanedMeta = stripSyndication(metaDescription);
+    
     const { error } = await supabase.from("articles").insert({
       id: articleId,
-      title: article.title,
-      subtitle: subtitle || null,
-      excerpt,
-      content: excerpt,
+      title: cleanedTitle,
+      subtitle: cleanedSubtitle || null,
+      excerpt: cleanedExcerpt,
+      content: cleanedExcerpt,
       image_url: storedImageUrl || null,
       image_caption: storedImageUrl ? `Imagem: ${article.source_name}` : null,
-      meta_description: metaDescription,
+      meta_description: cleanedMeta,
       source_url: article.source_url,
       source_name: article.source_name,
       author: "Redação Melhor News",

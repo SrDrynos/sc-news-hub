@@ -11,6 +11,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import { useArticleBySlug, usePublishedArticles } from "@/hooks/useArticles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { stripSyndicationText } from "@/lib/stripSyndication";
 
 // No placeholder allowed — only original source images
 
@@ -74,8 +75,8 @@ const ArticlePage = () => {
   const catName = (article as any).categories?.name || "Notícias";
   
   const imageUrl = article.image_url || null;
-  const metaDescription = (article.excerpt || article.title).substring(0, 160);
-  const subtitle = (article as any).subtitle || "";
+  const metaDescription = stripSyndicationText((article.excerpt || article.title).substring(0, 160));
+  const subtitle = stripSyndicationText((article as any).subtitle || "");
   const contentText = article.content || article.excerpt || "";
 
   // Calculate real reading time based on word count
