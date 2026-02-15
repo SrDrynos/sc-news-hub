@@ -19,6 +19,7 @@ export const useRegions = () => {
 export const useArticlesByRegion = (regionId?: string, limit = 20) => {
   return useQuery({
     queryKey: ["articles", "region", regionId, limit],
+    refetchInterval: 3 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("articles")
