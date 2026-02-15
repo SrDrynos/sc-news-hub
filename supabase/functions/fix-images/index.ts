@@ -24,6 +24,56 @@ function isValidOgImage(url: string): boolean {
   return !AD_EXCLUDE.some((ex) => lower.includes(ex));
 }
 
+// Detect PNG dimensions from raw bytes (IHDR chunk)
+function getPngDimensions(buf: Uint8Array): { w: number; h: number } | null {
+  // PNG signature: 137 80 78 71 13 10 26 10, IHDR at byte 16
+  if (buf.length < 24 || buf[0] !== 137 || buf[1] !== 80) return null;
+  const view = new DataView(buf.buffer, buf.byteOffset);
+  return { w: view.getUint32(16), h: view.getUint32(20) };
+}
+
+// Detect JPEG dimensions (SOF0/SOF2 marker)
+function getJpegDimensions(buf: Uint8Array): { w: number; h: number } | null {
+  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
+  let i = 2;
+  while (i < buf.length - 9) {
+    if (buf[i] !== 0xff) { i++; continue; }
+    const marker = buf[i + 1];
+    if (marker === 0xc0 || marker === 0xc2) {
+      const view = new DataView(buf.buffer, buf.byteOffset);
+      return { h: view.getUint16(i + 5), w: view.getUint16(i + 7) };
+    }
+    const segLen = (buf[i + 2] << 8) | buf[i + 3];
+    i += 2 + segLen;
+  }
+  return null;
+}
+
+function getImageDimensions(buf: Uint8Array, contentType: string): { w: number; h: number } | null {
+  if (contentType.includes("png")) return getPngDimensions(buf);
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return getJpegDimensions(buf);
+  return null; // webp/other — skip dimension check
+}
+
+function isLikelyLogo(buf: Uint8Array, contentType: string, byteSize: number): boolean {
+  const dims = getImageDimensions(buf, contentType);
+  if (!dims) return false;
+
+  const { w, h } = dims;
+  const ratio = Math.max(w, h) / Math.min(w, h);
+
+  // Too small to be a news photo (< 300px on any side)
+  if (w < 300 || h < 200) return true;
+
+  // Nearly square PNG under 100KB — very likely a logo/icon
+  if (contentType.includes("png") && ratio < 1.3 && byteSize < 100_000) return true;
+
+  // Very small file for any format (< 15KB) — likely icon/logo
+  if (byteSize < 15_000) return true;
+
+  return false;
+}
+
 async function downloadAndStore(
   imageUrl: string,
   articleId: string,
@@ -43,7 +93,15 @@ async function downloadAndStore(
     const contentType = response.headers.get("content-type") || "image/jpeg";
     if (!contentType.startsWith("image/") && !contentType.includes("octet-stream")) return null;
     const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength < 10000 || arrayBuffer.byteLength > 10 * 1024 * 1024) return null;
+    if (arrayBuffer.byteLength < 5000 || arrayBuffer.byteLength > 10 * 1024 * 1024) return null;
+
+    // Validate dimensions — reject logos/icons
+    const uint8 = new Uint8Array(arrayBuffer);
+    if (isLikelyLogo(uint8, contentType, arrayBuffer.byteLength)) {
+      console.log(`[fix-images] Rejected logo/icon: ${imageUrl} (${arrayBuffer.byteLength} bytes)`);
+      return null;
+    }
+
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const filePath = `articles/${articleId}.${ext}`;
     const { error } = await supabase.storage
