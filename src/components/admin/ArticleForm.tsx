@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
 import AuditPanel from "./AuditPanel";
+import CityAutocomplete from "./CityAutocomplete";
 
 interface ArticleFormProps {
   data: any;
@@ -182,7 +183,7 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
       {/* Cidade */}
       <div>
         <Label>Cidade * <span className="text-destructive text-xs">obrigatório</span> <span className="text-muted-foreground text-xs">(onde a notícia aconteceu)</span></Label>
-        <Input placeholder="Ex: Florianópolis - SC" value={data.city || ""} onChange={(e) => onChange({ ...data, city: e.target.value })} className={!data.city ? "border-destructive" : ""} />
+        <CityAutocomplete value={data.city || ""} onChange={(v) => onChange({ ...data, city: v })} className={!data.city ? "border-destructive" : ""} />
       </div>
 
       {/* Auditoria Editorial */}
