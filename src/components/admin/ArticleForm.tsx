@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
+import AuditPanel from "./AuditPanel";
 
 interface ArticleFormProps {
   data: any;
@@ -177,6 +178,9 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         <Label>URL da fonte original</Label>
         <Input placeholder="https://..." value={data.source_url || ""} onChange={(e) => onChange({ ...data, source_url: e.target.value })} />
       </div>
+
+      {/* Auditoria Editorial */}
+      <AuditPanel article={data} />
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2">
