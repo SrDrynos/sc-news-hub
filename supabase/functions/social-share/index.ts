@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SITE_URL = "https://melhornewssc.lovable.app";
+const SITE_URL = "https://melhornews.com.br";
 const SITE_NAME = "Melhor News SC";
 const DEFAULT_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/fcnc073RPWQim3ou1YDeDxtwice2/social-images/social-1771108122438-Portal_de_notícias_Melhor_News.webp";
 

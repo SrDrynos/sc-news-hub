@@ -9,7 +9,7 @@ import {
   Facebook, Instagram, MessageCircle, Copy, Check, ExternalLink, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const SITE_URL = "https://melhornewssc.lovable.app";
+const SITE_URL = "https://melhornews.com.br";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 function getCategoryLabel(cat?: { name: string } | null): string {
