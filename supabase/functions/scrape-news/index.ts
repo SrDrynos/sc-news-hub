@@ -172,11 +172,56 @@ function classifyCategory(text: string, categories: Array<{ id: string; keywords
   return bestCount > 0 ? bestMatch : null;
 }
 
-function classifyRegion(text: string, regions: Array<{ id: string; keywords: any }>): string | null {
+function classifyRegion(text: string, regions: Array<{ id: string; name?: string; keywords: any }>): string | null {
   const lower = text.toLowerCase();
   for (const region of regions) {
     const keywords = Array.isArray(region.keywords) ? region.keywords : [];
     for (const kw of keywords) { if (lower.includes(String(kw).toLowerCase())) return region.id; }
+  }
+  return null;
+}
+
+// ─── Source-name-based region fallback ────────────────────────────
+function classifyRegionBySource(sourceName: string, regions: Array<{ id: string; name?: string; keywords: any }>): string | null {
+  if (!sourceName) return null;
+  const lower = sourceName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Map common source name patterns to city names
+  const sourcePatterns: Record<string, string[]> = {
+    "joinville": ["ocp", "joinville"],
+    "blumenau": ["blumenau", "blumenews", "ajnoticias", "aj noticias"],
+    "itapema": ["itapema", "visor"],
+    "balneario camboriu": ["camboriu", "bc"],
+    "florianopolis": ["floripa", "florianopolis", "nsc total", "floripanews"],
+    "brusque": ["brusque", "o municipio", "omunicipio"],
+    "criciuma": ["criciuma", "engeplus"],
+    "lages": ["lages", "lageano", "correio lageano", "expressiva"],
+    "chapeco": ["chapeco"],
+    "tubarao": ["tubarao", "tuba", "notisul"],
+    "palhoca": ["palhoca", "palhocense"],
+    "itajai": ["itajai"],
+    "jaragua do sul": ["jaragua"],
+    "sao jose": ["sao jose"],
+    "ararangua": ["ararangua"],
+    "sombrio": ["sombrio", "sulsc", "sul sc"],
+    "icara": ["icara", "içara"],
+    "sangao": ["sangao", "sangão"],
+    "morro da fumaca": ["morro da fumaca", "morro da fumaça", "agora na cidade", "agoranacidade"],
+    "treze de maio": ["treze de maio"],
+    "jaguaruna": ["jaguaruna"],
+    "balneario rincao": ["rincao", "rincão"],
+  };
+
+  for (const [cityKey, patterns] of Object.entries(sourcePatterns)) {
+    const normalizedCity = cityKey.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (patterns.some(p => lower.includes(p))) {
+      // Find matching region
+      const region = regions.find(r => {
+        const rName = (r.name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return rName.includes(normalizedCity) || normalizedCity.includes(rName);
+      });
+      if (region) return region.id;
+    }
   }
   return null;
 }
@@ -740,7 +785,7 @@ async function processAndSave(
 
     // Fallback to keyword classification if AI didn't classify
     const categoryId = aiCategoryId || classifyCategory(fullText, categories);
-    const regionId = aiRegionId || classifyRegion(fullText, regions);
+    const regionId = aiRegionId || classifyRegion(fullText, regions) || classifyRegionBySource(article.source_name, regions);
 
     // Fallback excerpt if AI fails
     if (!excerpt || excerpt.length < 50) {
