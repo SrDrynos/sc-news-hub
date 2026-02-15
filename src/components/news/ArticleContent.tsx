@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import AdSlot from "@/components/ads/AdSlot";
+import { stripSyndicationText } from "@/lib/stripSyndication";
 
 interface ArticleContentProps {
   content: string;
@@ -19,8 +20,10 @@ function isCleanHtml(raw: string): boolean {
 function cleanScrapedContent(raw: string): string[] {
   let text = raw;
 
+  // Strip syndication/feed artifacts first
+  text = stripSyndicationText(text);
+
   // Remove truncation markers like [+981 chars]
-  text = text.replace(/\[\+\d+\s*chars?\]/gi, "");
 
   // Convert block-level HTML tags to paragraph breaks before stripping
   text = text.replace(/<\/?(p|div|section|article|aside|header|footer|figure|figcaption|blockquote|pre|ul|ol|li|dl|dt|dd|br|hr)[^>]*>/gi, "\n\n");
@@ -75,9 +78,11 @@ function cleanScrapedContent(raw: string): string[] {
 }
 
 const ArticleContent = ({ content }: ArticleContentProps) => {
-  const isHtml = useMemo(() => isCleanHtml(content), [content]);
+  // Pre-clean syndication artifacts from all content
+  const cleanedContent = useMemo(() => stripSyndicationText(content), [content]);
+  const isHtml = useMemo(() => isCleanHtml(cleanedContent), [cleanedContent]);
 
-  if (!content || content.trim().length === 0) {
+  if (!cleanedContent || cleanedContent.trim().length === 0) {
     return (
       <div className="article-body prose prose-lg max-w-none">
         <p className="text-muted-foreground italic">Conteúdo não disponível.</p>
@@ -90,13 +95,13 @@ const ArticleContent = ({ content }: ArticleContentProps) => {
     return (
       <div
         className="article-body prose prose-lg max-w-none [&>p]:text-foreground [&>p]:leading-[1.85] [&>p]:mb-6 [&>p]:text-lg [&>p]:font-serif [&>h2]:text-2xl [&>h2]:font-heading [&>h2]:font-bold [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-xl [&>h3]:font-heading [&>h3]:font-semibold [&>h3]:mt-8 [&>h3]:mb-3"
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: cleanedContent }}
       />
     );
   }
 
   // Fallback: scraped/dirty content — clean and render as paragraphs
-  const paragraphs = cleanScrapedContent(content);
+  const paragraphs = cleanScrapedContent(cleanedContent);
 
   if (paragraphs.length === 0) {
     return (
