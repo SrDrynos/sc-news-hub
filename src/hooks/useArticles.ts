@@ -27,6 +27,7 @@ export interface Article {
 export const usePublishedArticles = (categorySlug?: string, _unused?: string, limit = 20) => {
   return useQuery({
     queryKey: ["articles", "published", categorySlug, limit],
+    refetchInterval: 3 * 60 * 1000, // Auto-refresh every 3 minutes
     queryFn: async () => {
       let selectParts = "*";
       if (categorySlug) {
@@ -87,6 +88,7 @@ export const useArticleBySlug = (slug: string) => {
 export const useFeaturedArticle = () => {
   return useQuery({
     queryKey: ["articles", "featured"],
+    refetchInterval: 3 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("articles")

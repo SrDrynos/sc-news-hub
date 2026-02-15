@@ -109,8 +109,8 @@ function isValidImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
   // Must be http(s) URL
   if (!lower.startsWith("http")) return false;
-  // Exclude known non-article images
-  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.", "transparent.", "spinner", "loading"];
+  // Exclude known non-article images (expanded list)
+  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "ad-", "/ad/", "adserver", "doubleclick", "googlesyndication", "adsense", "adsbygoogle", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.", "transparent.", "spinner", "loading", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "promo/", "banner", "classified", "popup", "overlay"];
   if (exclude.some((ex) => lower.includes(ex))) return false;
   // Accept URLs with image extensions
   if (/\.(jpg|jpeg|png|webp|gif|avif|bmp|svg)/i.test(lower)) return true;
@@ -129,7 +129,7 @@ function isValidMetadataImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
   if (!lower.startsWith("http")) return false;
-  const hardExclude = ["favicon", "1x1", "spacer", "blank.", "transparent.", "spinner", "pixel"];
+  const hardExclude = ["favicon", "1x1", "spacer", "blank.", "transparent.", "spinner", "pixel", "ads/", "ad-", "/ad/", "adserver", "doubleclick", "googlesyndication", "adsense", "banner-ad", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "banner", "classified", "popup", "overlay", "logo", "icon", "selo", "stamp", "watermark", "brand"];
   return !hardExclude.some((ex) => lower.includes(ex));
 }
 
@@ -641,11 +641,17 @@ async function processAndSave(
             if (storedImageUrl) console.log(`[Image] ✓ og:image for "${article.title}"`);
           }
           
-          // Priority 2: First valid <img> in HTML
+          // Priority 2: First valid <img> in HTML (skip ads by checking parent context)
           if (!storedImageUrl) {
-            const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+            const imgMatches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)];
+            // Filter and prioritize: skip images inside ad containers
+            const adContainerPattern = /class=["'][^"']*\b(ad|ads|banner|sponsor|promo|anuncio|publicidade|guia)\b[^"']*["']/i;
             for (const m of imgMatches) {
               const src = m[1];
+              // Check surrounding HTML context for ad indicators
+              const matchIndex = m.index || 0;
+              const surroundingHtml = html.substring(Math.max(0, matchIndex - 300), matchIndex);
+              if (adContainerPattern.test(surroundingHtml)) continue;
               if (!src.includes("data:image") && isValidImageUrl(src)) {
                 const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
                 storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
@@ -657,11 +663,15 @@ async function processAndSave(
             }
           }
           
-          // Priority 3: Try any img even with relaxed validation
+          // Priority 3: Try any img with metadata validation (but still check ad context)
           if (!storedImageUrl) {
-            const allImgs = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+            const allImgs = [...html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)];
+            const adContainerPattern2 = /class=["'][^"']*\b(ad|ads|banner|sponsor|promo|anuncio|publicidade|guia)\b[^"']*["']/i;
             for (const m of allImgs) {
               const src = m[1];
+              const matchIndex = m.index || 0;
+              const surroundingHtml = html.substring(Math.max(0, matchIndex - 300), matchIndex);
+              if (adContainerPattern2.test(surroundingHtml)) continue;
               if (!src.includes("data:image") && isValidMetadataImageUrl(src)) {
                 const absUrl = src.startsWith("http") ? src : new URL(src, article.source_url).href;
                 storedImageUrl = await downloadAndStoreImage(absUrl, articleId, supabase, supabaseUrl);
