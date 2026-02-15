@@ -40,6 +40,23 @@ function isWithin24Hours(publishedDate: string | null): boolean {
 }
 
 // ─── Content Cleaning ────────────────────────────────────────────
+function deduplicateText(text: string): string {
+  if (!text) return text;
+  const trimmed = text.trim();
+  // Check if text is the same sentence repeated (with comma, period or space separator)
+  const half = Math.floor(trimmed.length / 2);
+  for (let i = half - 5; i <= half + 5; i++) {
+    if (i <= 0 || i >= trimmed.length) continue;
+    const sep = trimmed[i];
+    if (sep === ',' || sep === '.' || sep === ';') {
+      const first = trimmed.substring(0, i).trim();
+      const second = trimmed.substring(i + 1).trim();
+      if (first.length > 10 && first === second) return first;
+    }
+  }
+  return trimmed;
+}
+
 function cleanContent(markdown: string): string {
   let text = markdown;
   text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
@@ -410,7 +427,7 @@ async function fetchRSSArticles(feedUrl: string, sourceName: string): Promise<Ex
 
       articles.push({
         title,
-        subtitle: description.replace(/<[^>]+>/g, "").substring(0, 300).trim(),
+        subtitle: deduplicateText(description.replace(/<[^>]+>/g, "").substring(0, 300).trim()),
         content: body,
         image_url: imageUrl,
         source_url: link,
