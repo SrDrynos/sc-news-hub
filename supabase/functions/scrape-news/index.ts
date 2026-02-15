@@ -59,10 +59,45 @@ function deduplicateText(text: string): string {
 
 function cleanContent(markdown: string): string {
   let text = markdown;
+  // Remove markdown links and images
   text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
   text = text.replace(/<[^>]+>/g, "");
+
+  // ─── REMOÇÃO AGRESSIVA DE LIXO DE SITE ─────────────────────────
+  // Cookie consent banners (variações em PT e EN)
+  text = text.replace(/!?Revisit consent button[\s\S]{0,2000}?(Aceitar tudo|Accept all|Salvar preferências|Save preferences)/gi, "");
+  text = text.replace(/Valorizamos sua privacidade[\s\S]{0,2000}?(Aceitar tudo|Accept all|Salvar preferências)/gi, "");
+  text = text.replace(/Utilizamos cookies[\s\S]{0,1500}?(Aceitar tudo|Accept all|Salvar preferências|cookie policy)/gi, "");
+  text = text.replace(/Este site (usa|utiliza) cookies[\s\S]{0,1500}?(Aceitar|Accept|Concordo|I agree)/gi, "");
+  text = text.replace(/Personalizar preferências de consentimento[\s\S]{0,2000}?(Salvar|Save|Aceitar)/gi, "");
+  text = text.replace(/We use cookies[\s\S]{0,1500}?(Accept|Agree|Save)/gi, "");
+  text = text.replace(/cookie\s*(policy|settings|preferences|consent)[\s\S]{0,500}/gi, "");
+  
+  // LGPD / Privacy banners
+  text = text.replace(/Lei Geral de Proteção[\s\S]{0,1000}?(Aceitar|Concordo|Fechar)/gi, "");
+  text = text.replace(/Política de Privacidade[\s\S]{0,500}?(Aceitar|Concordo)/gi, "");
+
+  // Generic UI garbage blocks
+  text = text.replace(/!Close[\s\S]{0,500}/gi, "");
+  text = text.replace(/Mostrar mais\s*Necessário\s*Sempre ativo[\s\S]*/gi, "");
+  text = text.replace(/Cookies?\s+(necessários|funcionais|analíticos|de\s+desempenho|de\s+publicidade)[\s\S]{0,500}/gi, "");
+  
+  // Navigation, footer, social media blocks
   text = text.replace(/^.{0,30}(menu|nav|footer|header|cookie|sidebar|widget|anunci|publicidade|propaganda|newsletter|inscreva|cadastr|compartilh|siga-nos|redes sociais|todos os direitos|copyright|©).{0,50}$/gim, "");
+  text = text.replace(/FacebookInstagramMailTwitterYoutube/gi, "");
+  text = text.replace(/(Siga-nos|Follow us|Compartilhe|Share)\s*(no|on)?\s*(Facebook|Twitter|Instagram|WhatsApp|LinkedIn|Telegram)/gi, "");
+  text = text.replace(/Assine\s*(nossa\s*)?newsletter[\s\S]{0,300}/gi, "");
+  text = text.replace(/Inscreva-se[\s\S]{0,200}?(e-mail|email|newsletter)/gi, "");
+  
+  // Subscription / paywall prompts
+  text = text.replace(/(Assine|Subscribe|Cadastre-se|Sign up)[\s\S]{0,300}?(premium|assinante|subscriber|plano|plan)/gi, "");
+  text = text.replace(/Leia\s+mais\s+(notícias|matérias)[\s\S]{0,200}/gi, "");
+  
+  // Ads
+  text = text.replace(/Publicidade|Anúncio|Advertisement|Patrocinado|Sponsored/gi, "");
+
+  // Clean up URLs and whitespace
   text = text.replace(/^https?:\/\/\S+$/gm, "");
   text = text.replace(/\n{3,}/g, "\n\n");
   text = text.replace(/^(home|início|sobre|contato|fale conosco|política de privacidade|termos de uso|mapa do site)\s*$/gim, "");
@@ -488,6 +523,10 @@ async function processAndSave(
     }
     article.source_name = sourceName;
 
+    // LIMPAR conteúdo e subtítulo ANTES de qualquer processamento
+    article.content = cleanContent(article.content);
+    article.subtitle = cleanContent(article.subtitle);
+
     // REGRA: Rejeitar conteúdo com lixo de UI (YouTube, cookies, navegação)
     const combinedText = `${article.subtitle} ${article.content}`;
     const garbagePatterns = [
@@ -496,14 +535,29 @@ async function processAndSave(
       /playback.*begin shortly/i,
       /watch full video/i,
       /Revisit consent button/i,
-      /Valorizamos sua privacidade.*cookies/i,
+      /Valorizamos sua privacidade/i,
+      /Utilizamos cookies/i,
+      /cookie\s*(consent|policy|settings)/i,
+      /Personalizar preferências de consentimento/i,
       /FacebookInstagramMailTwitterYoutube/i,
       /Photo image of.*\d+K? subscribers/i,
       /autoplay is paused/i,
       /retrieving sharing information/i,
+      /Aceitar todos.*cookies/i,
+      /NecessárioSempre ativo/i,
+      /Cookies?\s+necessários\s+são\s+cruciais/i,
+      /Este site (usa|utiliza) cookies/i,
+      /Lei Geral de Proteção de Dados/i,
     ];
     if (garbagePatterns.some(p => p.test(combinedText))) {
       console.warn(`Rejected "${article.title}" — garbage UI content detected`);
+      return false;
+    }
+
+    // REGRA: Rejeitar se conteúdo limpo ficou muito curto após remoção de lixo
+    const cleanedWordCount = article.content.replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+    if (cleanedWordCount < 50) {
+      console.warn(`Rejected "${article.title}" — content only ${cleanedWordCount} words after cleaning (garbage site?)`);
       return false;
     }
 
