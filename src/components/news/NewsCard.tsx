@@ -10,6 +10,7 @@ export interface NewsCardArticle {
   id: string;
   slug?: string | null;
   title: string;
+  subtitle?: string | null;
   excerpt: string | null;
   image_url: string | null;
   source_name: string | null;
@@ -76,7 +77,9 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
           <div className="flex-1 p-4">
             <span className={`category-badge category-badge-${categorySlug} mb-2`}>{categoryName}</span>
             <h3 className="font-heading font-bold text-lg line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h3>
-            <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{news.excerpt}</p>
+            {(news.subtitle || news.excerpt) && (
+              <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{news.subtitle || news.excerpt}</p>
+            )}
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDate(news.published_at)}
@@ -104,7 +107,9 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
             <span className={`category-badge category-badge-${categorySlug}`}>{categoryName}</span>
           </div>
           <h3 className="font-heading font-bold text-lg line-clamp-2 group-hover:text-secondary transition-colors mb-2">{news.title}</h3>
-          <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{news.excerpt}</p>
+          {(news.subtitle || news.excerpt) && (
+            <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{news.subtitle || news.excerpt}</p>
+          )}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />

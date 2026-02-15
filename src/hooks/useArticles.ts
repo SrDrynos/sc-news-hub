@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Article {
   id: string;
   title: string;
+  subtitle: string | null;
   slug: string | null;
   content: string | null;
   excerpt: string | null;
