@@ -34,6 +34,7 @@ export type Database = {
           source_name: string | null
           source_url: string | null
           status: Database["public"]["Enums"]["article_status"]
+          subtitle: string | null
           title: string
           updated_at: string
         }
@@ -56,6 +57,7 @@ export type Database = {
           source_name?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["article_status"]
+          subtitle?: string | null
           title: string
           updated_at?: string
         }
@@ -78,6 +80,7 @@ export type Database = {
           source_name?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["article_status"]
+          subtitle?: string | null
           title?: string
           updated_at?: string
         }

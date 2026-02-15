@@ -24,6 +24,7 @@ function generateSlug(title: string): string {
 
 const emptyArticle = {
   title: "",
+  subtitle: "",
   excerpt: "",
   content: "",
   image_url: "",
@@ -81,6 +82,7 @@ const ArticlesPage = () => {
     await updateArticle.mutateAsync({
       id: editArticle.id,
       title: editArticle.title,
+      subtitle: (editArticle as any).subtitle,
       content: editArticle.content,
       excerpt: editArticle.excerpt,
       image_url: editArticle.image_url,
@@ -112,6 +114,7 @@ const ArticlesPage = () => {
       const slug = generateSlug(newArticle.title);
       const { error } = await supabase.from("articles").insert({
         title: newArticle.title,
+        subtitle: newArticle.subtitle || null,
         slug,
         excerpt: newArticle.excerpt || null,
         content: newArticle.content || null,

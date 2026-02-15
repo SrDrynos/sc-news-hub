@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ChevronRight, ArrowLeft, ExternalLink, MapPin, Tag } from "lucide-react";
+import { ChevronRight, ArrowLeft, ExternalLink, Tag } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import Layout from "@/components/layout/Layout";
 import ShareButtons from "@/components/news/ShareButtons";
@@ -71,7 +71,7 @@ const ArticlePage = () => {
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const catSlug = (article as any).categories?.slug || "geral";
   const catName = (article as any).categories?.name || "Notícias";
-  const regionName = (article as any).regions?.name;
+  
   const imageUrl = article.image_url || null;
   const metaDescription = (article.excerpt || article.title).substring(0, 160);
 
@@ -118,18 +118,19 @@ const ArticlePage = () => {
             </nav>
 
             {/* 2. Título */}
-            <h1 className="text-2xl md:text-3xl font-heading font-bold leading-tight text-foreground mb-4">
+            <h1 className="text-2xl md:text-3xl font-heading font-bold leading-tight text-foreground mb-2">
               {article.title}
             </h1>
 
-            {/* 3. Cidade + Categoria (VISÍVEIS) */}
+            {/* 2b. Subtítulo */}
+            {(article as any).subtitle && (
+              <p className="text-lg md:text-xl text-muted-foreground font-medium leading-snug mb-4">
+                {(article as any).subtitle}
+              </p>
+            )}
+
+            {/* 3. Categoria */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              {regionName && (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground bg-muted px-3 py-1.5 rounded-full">
-                  <MapPin className="h-3.5 w-3.5 text-secondary" />
-                  {regionName} – SC
-                </span>
-              )}
               <Link to={`/categoria/${catSlug}`}>
                 <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full hover:bg-muted transition-colors">
                   <Tag className="h-3.5 w-3.5" />
