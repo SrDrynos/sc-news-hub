@@ -111,7 +111,7 @@ function isValidImageUrl(url: string): boolean {
   // Must be http(s) URL
   if (!lower.startsWith("http")) return false;
   // Exclude known non-article images (expanded list)
-  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "ads/", "ad-", "/ad/", "adserver", "doubleclick", "googlesyndication", "adsense", "adsbygoogle", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.", "transparent.", "spinner", "loading", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "promo/", "banner", "classified", "popup", "overlay"];
+  const exclude = ["logo", "icon", "favicon", "avatar", "banner-ad", "/ads/", "ad-server", "adserver", "doubleclick", "googlesyndication", "adsense", "adsbygoogle", "pixel", "tracking", "button", "badge", "sprite", "thumbnail-small", "cotac", "widget", "selo", "stamp", "watermark", "brand", "header-img", "site-logo", "default-image", "no-image", "sem-imagem", "placeholder", "1x1", "spacer", "blank.", "transparent.", "spinner", "loading", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "promo/", "banner-", "classified", "popup", "overlay"];
   if (exclude.some((ex) => lower.includes(ex))) return false;
   // Accept URLs with image extensions
   if (/\.(jpg|jpeg|png|webp|gif|avif|bmp|svg)/i.test(lower)) return true;
@@ -130,7 +130,7 @@ function isValidMetadataImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
   if (!lower.startsWith("http")) return false;
-  const hardExclude = ["favicon", "1x1", "spacer", "blank.", "transparent.", "spinner", "pixel", "ads/", "ad-", "/ad/", "adserver", "doubleclick", "googlesyndication", "adsense", "banner-ad", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "banner", "classified", "popup", "overlay", "logo", "icon", "selo", "stamp", "watermark", "brand"];
+  const hardExclude = ["favicon", "1x1", "spacer", "blank.", "transparent.", "spinner", "pixel", "/ads/", "ad-server", "adserver", "doubleclick", "googlesyndication", "adsense", "banner-ad", "guia", "anuncio", "anunci", "publicidade", "propaganda", "patrocin", "sponsor", "promo-", "banner-", "classified", "popup", "overlay", "logo", "icon", "selo", "stamp", "watermark", "brand"];
   return !hardExclude.some((ex) => lower.includes(ex));
 }
 
