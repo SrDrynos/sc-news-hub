@@ -63,7 +63,6 @@ const AdSlot = ({ position, className = "" }: AdSlotProps) => {
           display: "block",
           width: "100%",
           maxWidth: `${width}px`,
-          minHeight: `${Math.min(height, 100)}px`,
           height: "auto",
         }}
         data-ad-client={publisherId}
