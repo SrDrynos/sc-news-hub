@@ -1,21 +1,32 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import NewsCard from "@/components/news/NewsCard";
 import Sidebar from "@/components/news/Sidebar";
 import AdSlot from "@/components/ads/AdSlot";
 import { usePublishedArticles, useCategories } from "@/hooks/useArticles";
+import { useArticlesByRegion, useRegions } from "@/hooks/useRegions";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const cidadeSlug = searchParams.get("cidade");
   const { data: categories = [] } = useCategories();
+  const { data: regions = [] } = useRegions();
 
-  const { data: articles = [], isLoading } = usePublishedArticles(slug, undefined, 20);
+  const region = cidadeSlug ? regions.find((r) => r.slug === cidadeSlug) : null;
+
+  const { data: categoryArticles = [], isLoading: catLoading } = usePublishedArticles(slug, undefined, 20);
+  const { data: regionArticles = [], isLoading: regionLoading } = useArticlesByRegion(region?.id, 20);
+
+  const articles = cidadeSlug && region ? regionArticles : categoryArticles;
+  const isLoading = cidadeSlug && region ? regionLoading : catLoading;
 
   const category = categories.find((cat) => cat.slug === slug);
+  const pageTitle = region ? region.name : (category?.name || slug);
 
-  if (!category && !isLoading) {
+  if (!category && !region && !isLoading && !catLoading) {
     return (
       <Layout>
         <div className="container py-16 text-center">
@@ -37,13 +48,23 @@ const CategoryPage = () => {
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
           <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground">{category?.name || slug}</span>
+          {region ? (
+            <>
+              <Link to="/categoria/cidades" className="hover:text-foreground transition-colors">Regional</Link>
+              <ChevronRight className="h-4 w-4" />
+              <span className="text-foreground">{region.name}</span>
+            </>
+          ) : (
+            <span className="text-foreground">{pageTitle}</span>
+          )}
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary">{category?.name || slug}</h1>
+          <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary">{pageTitle}</h1>
           <p className="text-muted-foreground mt-2">
-            Todas as notícias sobre {(category?.name || slug || "").toLowerCase()} em Santa Catarina
+            {region
+              ? `Todas as notícias de ${region.name} – SC`
+              : `Todas as notícias sobre ${(pageTitle || "").toLowerCase()} em Santa Catarina`}
           </p>
         </div>
 
@@ -62,7 +83,7 @@ const CategoryPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-16"><p className="text-muted-foreground">Nenhuma notícia encontrada nesta categoria.</p></div>
+              <div className="text-center py-16"><p className="text-muted-foreground">Nenhuma notícia encontrada{region ? ` para ${region.name}` : " nesta categoria"}.</p></div>
             )}
           </div>
           <div className="lg:col-span-1"><Sidebar /></div>
