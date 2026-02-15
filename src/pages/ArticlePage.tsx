@@ -176,6 +176,14 @@ const ArticlePage = () => {
               <ArticleContent content={contentText} />
             )}
 
+            {/* 7b. Keywords/Tags SEO */}
+            {Array.isArray((article as any).tags) && (article as any).tags.length > 0 && (
+              <p className="text-sm text-muted-foreground italic mb-6">
+                <span className="font-semibold not-italic text-foreground">Keywords:</span>{" "}
+                {(article as any).tags.join("; ")}
+              </p>
+            )}
+
             {/* 7. Fonte OBRIGATÓRIA + Link DESTACADO */}
             <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-5 mb-6">
               {article.source_name && (
