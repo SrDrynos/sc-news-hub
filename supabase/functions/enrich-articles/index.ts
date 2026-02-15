@@ -18,10 +18,10 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // Find published articles with < 300 words in content
+    // Find published articles that need enrichment (short content OR missing tags)
     const { data: articles, error: fetchErr } = await sb
       .from("articles")
-      .select("id, title, source_url, content, excerpt, subtitle, category_id")
+      .select("id, title, source_url, content, excerpt, subtitle, category_id, city, tags")
       .eq("status", "published")
       .not("source_url", "is", null)
       .order("created_at", { ascending: true })
@@ -29,15 +29,16 @@ serve(async (req) => {
 
     if (fetchErr) throw fetchErr;
 
-    // Filter to only articles with < 300 words
-    const shortArticles = (articles || []).filter((a: any) => {
+    // Filter: short content (<300 words) OR missing/incomplete tags
+    const needsEnrichment = (articles || []).filter((a: any) => {
       const text = (a.content || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       const words = text.split(/\s+/).filter(Boolean).length;
-      return words < 300;
+      const hasTags = Array.isArray(a.tags) && a.tags.length === 7;
+      return words < 300 || !hasTags;
     });
 
-    if (shortArticles.length === 0) {
-      return new Response(JSON.stringify({ message: "No short articles found in this batch", offset, checked: articles?.length || 0 }), {
+    if (needsEnrichment.length === 0) {
+      return new Response(JSON.stringify({ message: "No articles need enrichment in this batch", offset, checked: articles?.length || 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -45,12 +46,13 @@ serve(async (req) => {
     if (dry_run) {
       return new Response(JSON.stringify({
         dry_run: true,
-        found: shortArticles.length,
-        articles: shortArticles.map((a: any) => ({
+        found: needsEnrichment.length,
+        articles: needsEnrichment.map((a: any) => ({
           id: a.id,
           title: a.title,
           source_url: a.source_url,
           word_count: (a.content || "").replace(/<[^>]+>/g, " ").trim().split(/\s+/).filter(Boolean).length,
+          has_tags: Array.isArray(a.tags) && a.tags.length === 7,
         })),
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
