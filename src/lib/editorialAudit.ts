@@ -1,5 +1,5 @@
 /**
- * Auditor Editorial Automático
+ * Auditor Editorial Automático — Manual Melhor News Brasil (Atualizado)
  * Valida artigos antes da publicação com regras 100% inegociáveis.
  */
 
@@ -11,6 +11,11 @@ function countWords(text: string): number {
   if (!text) return 0;
   const clean = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   return clean.split(/\s+/).filter(Boolean).length;
+}
+
+function countChars(text: string): number {
+  if (!text) return 0;
+  return text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().length;
 }
 
 export interface AuditError {
@@ -33,6 +38,7 @@ export function auditArticle(article: {
   source_name?: string;
   category_id?: string;
   city?: string;
+  tags?: string[];
 }): AuditResult {
   const errors: AuditError[] = [];
 
@@ -44,12 +50,12 @@ export function auditArticle(article: {
     article.source_name || "",
   ].join(" ");
 
-  // REGRA 1 – Caracteres corrompidos
+  // REGRA 1 – Caracteres corrompidos [RULES_1]
   if (CORRUPTED_PATTERN.test(allText)) {
     errors.push({ rule: 1, message: "Caractere corrompido detectado no conteúdo." });
   }
 
-  // REGRA 2 – Sigla "SC" proibida
+  // REGRA 2 – Sigla "SC" proibida [RULES_2]
   const fieldsToCheckSC = [
     { name: "Título", value: article.title || "" },
     { name: "Subtítulo", value: article.excerpt || "" },
@@ -62,7 +68,7 @@ export function auditArticle(article: {
     }
   }
 
-  // REGRA 3 – Hierarquia: campos obrigatórios
+  // REGRA 3 – Campos obrigatórios [FIELDS_3..10]
   if (!article.title?.trim()) {
     errors.push({ rule: 3, message: "Título é obrigatório." });
   }
@@ -82,26 +88,32 @@ export function auditArticle(article: {
     errors.push({ rule: 3, message: "URL da fonte original é obrigatória." });
   }
 
-  // REGRA 4 – Subtítulo máx. 300 palavras (resumo informativo)
+  // REGRA 4 – Subtítulo máx. 50 palavras [SUBTITLE_12]
   const excerptWords = countWords(article.excerpt || "");
-  if (excerptWords > 300) {
-    errors.push({ rule: 4, message: `Resumo tem ${excerptWords} palavras (máx. 300).` });
+  if (excerptWords > 50) {
+    errors.push({ rule: 4, message: `Subtítulo tem ${excerptWords} palavras (máx. 50).` });
   }
 
-  // REGRA 5 – Corpo do artigo mínimo 300 palavras (obrigatório para AdSense)
-  const contentWords = countWords(article.content || "");
-  if (contentWords < 300) {
-    errors.push({ rule: 5, message: `Corpo do artigo tem ${contentWords} palavras (mín. 300). Menos de 300 palavras prejudica o AdSense.` });
+  // REGRA 5 – Corpo mín. 500 caracteres [BODY_14]
+  const contentChars = countChars(article.content || "");
+  if (contentChars < 500) {
+    errors.push({ rule: 5, message: `Corpo tem ${contentChars} caracteres (mín. 500).` });
   }
 
-  // REGRA 6 – Categoria obrigatória
+  // REGRA 6 – Categoria obrigatória [FIELDS_9]
   if (!article.category_id) {
     errors.push({ rule: 6, message: "Categoria é obrigatória." });
   }
 
-  // REGRA 7 – Cidade obrigatória (ONDE a notícia aconteceu)
+  // REGRA 7 – Cidade obrigatória [FIELDS_10]
   if (!article.city?.trim()) {
     errors.push({ rule: 7, message: "Cidade é obrigatória. Informe onde a notícia aconteceu." });
+  }
+
+  // REGRA 8 – Tags/Keywords: exatamente 7 [TAGS_20]
+  const tags = article.tags || [];
+  if (tags.length !== 7) {
+    errors.push({ rule: 8, message: `Tags: ${tags.length}/7 informadas. São obrigatórias exatamente 7 keywords.` });
   }
 
   return {
