@@ -23,7 +23,7 @@ import AdminArticlesPage from "./pages/admin/ArticlesPage";
 import RecyclePage from "./pages/admin/RecyclePage";
 import SourcesPage from "./pages/admin/SourcesPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
-import RegionsPage from "./pages/admin/RegionsPage";
+
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import RssPage from "./pages/admin/RssPage";
@@ -65,7 +65,7 @@ const App = () => (
             <Route path="/admin/reciclagem" element={<AdminLayout><RecyclePage /></AdminLayout>} />
             <Route path="/admin/fontes" element={<AdminLayout><SourcesPage /></AdminLayout>} />
             <Route path="/admin/categorias" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
-            <Route path="/admin/regioes" element={<AdminLayout><RegionsPage /></AdminLayout>} />
+            
             <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
             <Route path="/admin/rss" element={<AdminLayout><RssPage /></AdminLayout>} />

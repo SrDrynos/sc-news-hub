@@ -12,7 +12,7 @@ export interface Article {
   source_name: string | null;
   author: string | null;
   category_id: string | null;
-  region_id: string | null;
+  
   score: number;
   score_criteria: any;
   status: "published" | "draft" | "recycled";
@@ -21,24 +21,17 @@ export interface Article {
   created_at: string;
   updated_at: string;
   categories?: { name: string; slug: string } | null;
-  regions?: { name: string; slug: string } | null;
 }
 
-export const usePublishedArticles = (categorySlug?: string, regionSlug?: string, limit = 20) => {
+export const usePublishedArticles = (categorySlug?: string, _unused?: string, limit = 20) => {
   return useQuery({
-    queryKey: ["articles", "published", categorySlug, regionSlug, limit],
+    queryKey: ["articles", "published", categorySlug, limit],
     queryFn: async () => {
-      // Build select with !inner joins when filtering by category/region
       let selectParts = "*";
       if (categorySlug) {
         selectParts += ", categories!inner(name, slug)";
       } else {
         selectParts += ", categories(name, slug)";
-      }
-      if (regionSlug) {
-        selectParts += ", regions!inner(name, slug)";
-      } else {
-        selectParts += ", regions(name, slug)";
       }
 
       let query = supabase
@@ -51,9 +44,6 @@ export const usePublishedArticles = (categorySlug?: string, regionSlug?: string,
 
       if (categorySlug) {
         query = query.eq("categories.slug", categorySlug);
-      }
-      if (regionSlug) {
-        query = query.eq("regions.slug", regionSlug);
       }
 
       const { data, error } = await query;
@@ -70,16 +60,15 @@ export const useArticleBySlug = (slug: string) => {
       // Try by slug first, then by id
       let { data, error } = await (supabase
         .from("articles")
-        .select("*, categories(name, slug), regions(name, slug)")
+        .select("*, categories(name, slug)")
         .eq("status", "published") as any)
         .eq("slug", slug)
         .maybeSingle();
       
       if (!data) {
-        // Fallback: try by id
         const result = await supabase
           .from("articles")
-          .select("*, categories(name, slug), regions(name, slug)")
+          .select("*, categories(name, slug)")
           .eq("status", "published")
           .eq("id", slug)
           .maybeSingle();
@@ -100,7 +89,7 @@ export const useFeaturedArticle = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("articles")
-        .select("*, categories(name, slug), regions(name, slug)")
+        .select("*, categories(name, slug)")
         .eq("status", "published")
         .lte("published_at", new Date().toISOString())
         .order("score", { ascending: false })
@@ -121,7 +110,7 @@ export const useAllArticles = (status?: string) => {
     queryFn: async () => {
       let query = supabase
         .from("articles")
-        .select("*, categories(name, slug), regions(name, slug)")
+        .select("*, categories(name, slug)")
         .order("created_at", { ascending: false });
 
       if (effectiveStatus) {
@@ -178,19 +167,8 @@ export const useCategories = () => {
   });
 };
 
-export const useRegions = () => {
-  return useQuery({
-    queryKey: ["regions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("regions")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-};
+
+
 
 export const useNewsSources = () => {
   return useQuery({

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Image as ImageIcon } from "lucide-react";
+import { Upload } from "lucide-react";
 
 interface ArticleFormProps {
   data: any;
@@ -15,7 +15,6 @@ interface ArticleFormProps {
   saveLabel: string;
   extraActions?: React.ReactNode;
   categories: any[];
-  regions: any[];
 }
 
 function countWords(text: string): number {
@@ -23,7 +22,7 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categories, regions }: ArticleFormProps) => {
+const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categories }: ArticleFormProps) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -90,7 +89,7 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         />
       </div>
 
-      {/* Resumo informativo (principal — exibido na página) */}
+      {/* Resumo informativo */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <Label>Resumo informativo * <span className="text-muted-foreground text-xs">(80-300 palavras)</span></Label>
@@ -104,13 +103,11 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         </p>
       </div>
 
-      {/* Conteúdo adicional (opcional) */}
+      {/* Conteúdo adicional */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <Label>Conteúdo adicional <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-          <span className="text-xs text-muted-foreground">
-            {wordCount} palavras
-          </span>
+          <span className="text-xs text-muted-foreground">{wordCount} palavras</span>
         </div>
         <Textarea
           placeholder="Notas adicionais (opcional — o resumo acima é o conteúdo principal)"
@@ -127,13 +124,7 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
           <div className="flex-1">
             <Input placeholder="URL da imagem (ou faça upload)" value={data.image_url || ""} onChange={(e) => onChange({ ...data, image_url: e.target.value })} />
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageUpload}
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1 shrink-0">
             <Upload className="h-4 w-4" />
             {uploading ? "Enviando..." : "Upload"}
@@ -152,26 +143,15 @@ const ArticleForm = ({ data, onChange, onSave, saveLabel, extraActions, categori
         <Input placeholder="Ex: Foto: Divulgação / NSC Total" value={data.image_caption || ""} onChange={(e) => onChange({ ...data, image_caption: e.target.value })} />
       </div>
 
-      {/* Categoria e Região */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Cidade da notícia * <span className="text-destructive text-xs">obrigatório</span></Label>
-          <Select value={data.region_id || ""} onValueChange={(v) => onChange({ ...data, region_id: v })}>
-            <SelectTrigger className={!data.region_id ? "border-destructive" : ""}><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
-            <SelectContent>
-              {regions.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Categoria da notícia * <span className="text-destructive text-xs">obrigatório</span></Label>
-          <Select value={data.category_id || ""} onValueChange={(v) => onChange({ ...data, category_id: v })}>
-            <SelectTrigger className={!data.category_id ? "border-destructive" : ""}><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-            <SelectContent>
-              {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Categoria */}
+      <div>
+        <Label>Categoria da notícia * <span className="text-destructive text-xs">obrigatório</span></Label>
+        <Select value={data.category_id || ""} onValueChange={(v) => onChange({ ...data, category_id: v })}>
+          <SelectTrigger className={!data.category_id ? "border-destructive" : ""}><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+          <SelectContent>
+            {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Autor e Fonte */}
