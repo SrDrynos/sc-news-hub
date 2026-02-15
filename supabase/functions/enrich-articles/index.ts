@@ -173,8 +173,11 @@ Conteúdo: ${(newContent || "").replace(/<[^>]+>/g, " ").substring(0, 1500)}
 
 Regras:
 - Inclua obrigatoriamente a cidade e "Santa Catarina"
-- Termos relevantes e pesquisáveis (1-3 palavras cada)
-- NÃO repita o título, NÃO use termos genéricos
+- Use SUBSTANTIVOS ou EXPRESSÕES NOMINAIS relevantes (ex: "acidente de trânsito", "operação policial", "saúde pública")
+- NUNCA use verbos conjugados isolados (ex: "vence", "conquista", "lança", "deixa")
+- NUNCA use adjetivos/advérbios soltos (ex: "primeira", "novo", "grande")
+- Termos que alguém digitaria no Google (1-3 palavras cada)
+- NÃO repita o título, NÃO use nome da fonte, NÃO use termos genéricos
 
 Responda APENAS com JSON: {"tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7"]}`,
                 },
