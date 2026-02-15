@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 const SITE_URL = "https://melhornewssc.lovable.app";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 function getCategoryLabel(cat?: { name: string } | null): string {
   return (cat?.name || "GERAL").toUpperCase();
@@ -26,10 +27,15 @@ function buildArticleUrl(slug: string | null, id: string): string {
   return `${SITE_URL}/noticia/${slug || id}`;
 }
 
+// Social share URL — serves proper OG meta tags for crawlers, then redirects
+function buildShareUrl(slug: string | null, id: string): string {
+  return `${SUPABASE_URL}/functions/v1/social-share?slug=${encodeURIComponent(slug || id)}`;
+}
+
 // ─── Social text generators ───────────────────────────────────
 function facebookFeedText(article: any): string {
   const cat = getCategoryLabel(article.categories);
-  const url = buildArticleUrl(article.slug, article.id);
+  const url = buildShareUrl(article.slug, article.id);
   const subtitle = article.subtitle || article.excerpt || "";
   const sub = truncate(subtitle, 200);
   return `📰 ${cat}\n\n${article.title}\n\n${sub}\n\n🔗 Leia a matéria completa:\n${url}`;
@@ -37,7 +43,7 @@ function facebookFeedText(article: any): string {
 
 function facebookGroupText(article: any): string {
   const cat = getCategoryLabel(article.categories);
-  const url = buildArticleUrl(article.slug, article.id);
+  const url = buildShareUrl(article.slug, article.id);
   const subtitle = article.subtitle || article.excerpt || "";
   const sub = truncate(subtitle, 150);
   return `${cat} — ${article.title}\n\n${sub}\n\nLeia mais: ${url}`;
@@ -52,7 +58,7 @@ function instagramCaption(article: any): string {
 
 function whatsappText(article: any): string {
   const cat = getCategoryLabel(article.categories);
-  const url = buildArticleUrl(article.slug, article.id);
+  const url = buildShareUrl(article.slug, article.id);
   const subtitle = article.subtitle || article.excerpt || "";
   const sub = truncate(subtitle, 160);
   return `📰 *${cat}*\n*${article.title}*\n\n${sub}\n\n🔗 Leia mais:\n${url}`;
