@@ -787,6 +787,18 @@ async function processAndSave(
     const categoryId = aiCategoryId || classifyCategory(fullText, categories);
     const regionId = aiRegionId || classifyRegion(fullText, regions) || classifyRegionBySource(article.source_name, regions);
 
+    // Resolve city name from AI or region
+    let cityName: string | null = null;
+    if (aiRegionId) {
+      // AI provided a city, find its name from regions
+      const aiReg = regions.find((r: any) => r.id === aiRegionId);
+      if (aiReg) cityName = aiReg.name;
+    }
+    if (!cityName && regionId) {
+      const reg = regions.find((r: any) => r.id === regionId);
+      if (reg) cityName = reg.name;
+    }
+
     // Fallback excerpt if AI fails
     if (!excerpt || excerpt.length < 50) {
       const plainText = article.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -825,6 +837,7 @@ async function processAndSave(
       source_url: article.source_url,
       source_name: article.source_name,
       author: "Redação Melhor News",
+      city: cityName,
       category_id: categoryId,
       region_id: regionId,
       score: trustScore,

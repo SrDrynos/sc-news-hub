@@ -143,13 +143,13 @@ Deno.serve(async (req) => {
     limit = body.limit || 30;
   } catch {}
 
-  // Get published articles with images, paginated
+  // Get published articles WITHOUT images (to fix missing ones)
   const { data: articles, error } = await supabase
     .from("articles")
-    .select("id, title, source_url, image_url")
+    .select("id, title, source_url, image_url, source_name")
     .eq("status", "published")
     .not("source_url", "is", null)
-    .not("image_url", "is", null)
+    .is("image_url", null)
     .order("published_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
