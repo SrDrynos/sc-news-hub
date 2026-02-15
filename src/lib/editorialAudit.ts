@@ -32,6 +32,7 @@ export function auditArticle(article: {
   source_url?: string;
   source_name?: string;
   category_id?: string;
+  city?: string;
 }): AuditResult {
   const errors: AuditError[] = [];
 
@@ -96,6 +97,11 @@ export function auditArticle(article: {
   // REGRA 6 – Categoria obrigatória
   if (!article.category_id) {
     errors.push({ rule: 6, message: "Categoria é obrigatória." });
+  }
+
+  // REGRA 7 – Cidade obrigatória (ONDE a notícia aconteceu)
+  if (!article.city?.trim()) {
+    errors.push({ rule: 7, message: "Cidade é obrigatória. Informe onde a notícia aconteceu." });
   }
 
   return {

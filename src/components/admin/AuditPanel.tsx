@@ -12,6 +12,7 @@ interface AuditPanelProps {
     source_url?: string;
     source_name?: string;
     category_id?: string;
+    city?: string;
   };
 }
 
@@ -22,9 +23,10 @@ const RULE_LABELS: Record<number, string> = {
   4: "Subtítulo até 300 palavras",
   5: "Corpo com mín. 300 palavras",
   6: "Categoria selecionada",
+  7: "Cidade informada",
 };
 
-const ALL_RULES = [1, 2, 3, 4, 5, 6];
+const ALL_RULES = [1, 2, 3, 4, 5, 6, 7];
 
 const AuditPanel = ({ article }: AuditPanelProps) => {
   const result = useMemo(() => auditArticle(article), [article]);
