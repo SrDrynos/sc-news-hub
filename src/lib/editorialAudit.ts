@@ -87,7 +87,11 @@ export function auditArticle(article: {
     errors.push({ rule: 4, message: `Resumo tem ${excerptWords} palavras (máx. 300).` });
   }
 
-  // REGRA 5 – Corpo não obrigatório (modelo agregador — resumo no excerpt)
+  // REGRA 5 – Corpo do artigo mínimo 300 palavras (obrigatório para AdSense)
+  const contentWords = countWords(article.content || "");
+  if (contentWords < 300) {
+    errors.push({ rule: 5, message: `Corpo do artigo tem ${contentWords} palavras (mín. 300). Menos de 300 palavras prejudica o AdSense.` });
+  }
 
   // REGRA 6 – Categoria obrigatória
   if (!article.category_id) {

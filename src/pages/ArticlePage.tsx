@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import Layout from "@/components/layout/Layout";
 import ShareButtons from "@/components/news/ShareButtons";
 import ArticleMeta from "@/components/news/ArticleMeta";
+import ArticleContent from "@/components/news/ArticleContent";
 import RelatedArticles from "@/components/news/RelatedArticles";
 import Sidebar from "@/components/news/Sidebar";
 import AdSlot from "@/components/ads/AdSlot";
@@ -74,12 +75,12 @@ const ArticlePage = () => {
   
   const imageUrl = article.image_url || null;
   const metaDescription = (article.excerpt || article.title).substring(0, 160);
+  const subtitle = (article as any).subtitle || "";
+  const contentText = article.content || article.excerpt || "";
 
-  // Strip HTML for plain text excerpt display
-  const plainExcerpt = (article.excerpt || "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  // Calculate real reading time based on word count
+  const wordCount = contentText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
   return (
     <Layout>
@@ -130,17 +131,21 @@ const ArticlePage = () => {
               {article.title}
             </h1>
 
-            {/* 4. Subtítulo — até 3 linhas, complementar ao título */}
-            {(article as any).subtitle && (
+            {/* 4. Subtítulo — OBRIGATÓRIO, até 3 linhas */}
+            {subtitle ? (
               <p className="text-lg md:text-xl text-muted-foreground font-medium leading-snug mb-4 line-clamp-3">
-                {(article as any).subtitle}
+                {subtitle}
+              </p>
+            ) : (
+              <p className="text-lg md:text-xl text-muted-foreground font-medium leading-snug mb-4 line-clamp-3">
+                {metaDescription}
               </p>
             )}
 
             {/* 5. Meta: Autor, Data, Hora, Tempo de leitura */}
             <ArticleMeta
               publishedAt={article.published_at}
-              readingTime={1}
+              readingTime={readingTime}
               categoryName={catName}
               categorySlug={catSlug}
             />
@@ -166,17 +171,10 @@ const ArticlePage = () => {
               </figure>
             )}
 
-            {/* 7. Resumo — texto fiel ao original, ~5 linhas */}
-            {plainExcerpt && (
-              <div className="mb-6">
-                <p className="text-base text-foreground leading-relaxed line-clamp-[7]">
-                  {plainExcerpt}
-                </p>
-              </div>
+            {/* 7. Artigo — Resumo da fonte, mínimo 300 palavras */}
+            {contentText && (
+              <ArticleContent content={contentText} />
             )}
-
-            {/* Ad between content */}
-            <AdSlot position="content_1" className="my-6" />
 
             {/* 7. Fonte OBRIGATÓRIA + Link DESTACADO */}
             <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-5 mb-6">
