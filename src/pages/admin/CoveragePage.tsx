@@ -234,64 +234,6 @@ const CoveragePage = () => {
         </Card>
       </div>
 
-      {/* Heatmap */}
-      {!loading && heatmapData.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Heatmap — Últimos 7 dias</CardTitle>
-            <CardDescription>Intensidade de publicações por cidade e dia</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <div className="min-w-[600px]">
-              {/* Header row */}
-              <div className="flex items-center gap-1 mb-1">
-                <div className="w-36 shrink-0" />
-                {heatmapData[0]?.days.map((d, i) => (
-                  <div key={i} className="flex-1 text-center">
-                    <p className="text-[10px] font-medium text-muted-foreground">{d.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{d.date}</p>
-                  </div>
-                ))}
-                <div className="w-12 shrink-0 text-center text-[10px] font-medium text-muted-foreground">Total</div>
-              </div>
-              {/* Data rows */}
-              {heatmapData.map(row => {
-                const total = row.days.reduce((s, d) => s + d.count, 0);
-                return (
-                  <div key={row.regionId} className="flex items-center gap-1 mb-0.5">
-                    <div className="w-36 shrink-0 text-xs font-medium truncate pr-2">{row.cityName}</div>
-                    {row.days.map((d, i) => (
-                      <Tooltip key={i}>
-                        <TooltipTrigger asChild>
-                          <div className={`flex-1 h-7 rounded-sm flex items-center justify-center text-[10px] font-medium transition-colors cursor-default ${getCellColor(d.count)} ${d.count > 0 ? "text-white" : "text-muted-foreground"}`}>
-                            {d.count > 0 ? d.count : ""}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                          <p className="font-medium">{row.cityName}</p>
-                          <p>{d.label} {d.date}: {d.count} notícia{d.count !== 1 ? "s" : ""}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                    <div className="w-12 shrink-0 text-center text-xs font-bold">{total}</div>
-                  </div>
-                );
-              })}
-              {/* Legend */}
-              <div className="flex items-center gap-2 mt-4 text-[10px] text-muted-foreground">
-                <span>Menos</span>
-                <div className="h-4 w-4 rounded-sm bg-muted" />
-                <div className="h-4 w-4 rounded-sm bg-emerald-200 dark:bg-emerald-900/40" />
-                <div className="h-4 w-4 rounded-sm bg-emerald-400 dark:bg-emerald-700/60" />
-                <div className="h-4 w-4 rounded-sm bg-emerald-500 dark:bg-emerald-600" />
-                <div className="h-4 w-4 rounded-sm bg-emerald-700 dark:bg-emerald-500" />
-                <span>Mais</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* City grid */}
       {loading ? (
         <p className="text-muted-foreground">Carregando...</p>
