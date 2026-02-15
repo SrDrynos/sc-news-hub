@@ -1,14 +1,14 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { usePublishedArticles } from "@/hooks/useArticles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  Facebook, Instagram, MessageCircle, Copy, Check, ExternalLink, ChevronDown, ChevronUp,
+  Facebook, Instagram, MessageCircle, Copy, Check, ExternalLink, ChevronDown, ChevronUp, Send, Loader2,
 } from "lucide-react";
-
 const SITE_URL = "https://melhornews.com.br";
 const API_BASE = "https://api.melhornews.com.br";
 
@@ -132,8 +132,27 @@ function SocialCardPreview({
 // ─── Article social row ───────────────────────────────────────
 function ArticleSocialRow({ article }: { article: any }) {
   const [expanded, setExpanded] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const { toast } = useToast();
   const cat = getCategoryLabel(article.categories);
   const url = buildArticleUrl(article.slug, article.id);
+
+  const handlePostToFacebook = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPosting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("post-to-facebook", {
+        body: { article_id: article.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "✅ Publicado no Facebook!", description: data.fb_post_id ? `Post ID: ${data.fb_post_id}` : undefined });
+    } catch (err: any) {
+      toast({ title: "Erro ao publicar", description: err.message, variant: "destructive" });
+    } finally {
+      setPosting(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -157,6 +176,16 @@ function ArticleSocialRow({ article }: { article: any }) {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={handlePostToFacebook}
+              disabled={posting}
+            >
+              {posting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              {posting ? "Postando..." : "Facebook"}
+            </Button>
             <a href={url} target="_blank" rel="noopener noreferrer">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                 <ExternalLink className="h-3.5 w-3.5" />
