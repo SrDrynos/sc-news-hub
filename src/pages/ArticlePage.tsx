@@ -117,29 +117,27 @@ const ArticlePage = () => {
               <span className="text-foreground truncate max-w-[200px]">{article.title}</span>
             </nav>
 
-            {/* 2. Título */}
+            {/* 2. Chapéu (Categoria) */}
+            <Link to={`/categoria/${catSlug}`}>
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary uppercase tracking-wide mb-3">
+                <Tag className="h-3.5 w-3.5" />
+                {catName}
+              </span>
+            </Link>
+
+            {/* 3. Título */}
             <h1 className="text-2xl md:text-3xl font-heading font-bold leading-tight text-foreground mb-2">
               {article.title}
             </h1>
 
-            {/* 2b. Subtítulo */}
+            {/* 4. Subtítulo — até 3 linhas, complementar ao título */}
             {(article as any).subtitle && (
-              <p className="text-lg md:text-xl text-muted-foreground font-medium leading-snug mb-4">
+              <p className="text-lg md:text-xl text-muted-foreground font-medium leading-snug mb-4 line-clamp-3">
                 {(article as any).subtitle}
               </p>
             )}
 
-            {/* 3. Categoria */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <Link to={`/categoria/${catSlug}`}>
-                <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full hover:bg-muted transition-colors">
-                  <Tag className="h-3.5 w-3.5" />
-                  {catName}
-                </span>
-              </Link>
-            </div>
-
-            {/* 4. Meta: Data, Hora */}
+            {/* 5. Meta: Autor, Data, Hora, Tempo de leitura */}
             <ArticleMeta
               publishedAt={article.published_at}
               readingTime={1}
@@ -147,13 +145,13 @@ const ArticlePage = () => {
               categorySlug={catSlug}
             />
 
-            {/* 5. Imagem (miniatura, 1 só, com crédito) */}
+            {/* 6. Foto — imagem original da fonte, sem recorte */}
             {imageUrl && (
               <figure className="mb-6">
                 <img
                   src={imageUrl}
                   alt={article.title}
-                  className="w-full max-h-80 object-cover rounded-lg"
+                  className="w-full rounded-lg"
                   loading="eager"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
@@ -168,10 +166,10 @@ const ArticlePage = () => {
               </figure>
             )}
 
-            {/* 6. Resumo curto */}
+            {/* 7. Resumo — texto fiel ao original, ~5 linhas */}
             {plainExcerpt && (
               <div className="mb-6">
-                <p className="text-base text-foreground leading-relaxed">
+                <p className="text-base text-foreground leading-relaxed line-clamp-[7]">
                   {plainExcerpt}
                 </p>
               </div>
