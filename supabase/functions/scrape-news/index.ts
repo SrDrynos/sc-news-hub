@@ -716,38 +716,49 @@ Deno.serve(async (req) => {
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     // ─── Authentication & Authorization ──────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Allow scheduled cron calls (they send the service role or anon key directly)
+    let isCronCall = false;
+    try {
+      const body = await req.clone().json();
+      if (body?.time === "scheduled") isCronCall = true;
+    } catch { /* not JSON or no body */ }
+
+    if (!isCronCall) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const authClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
-    }
 
-    const authClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+      const { data: { user }, error: userError } = await authClient.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      const userId = user.id;
+      const { data: roles } = await createClient(supabaseUrl, supabaseKey)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
 
-    const userId = user.id;
-    const { data: roles } = await createClient(supabaseUrl, supabaseKey)
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    const isAuthorized = roles?.some((r: any) => ["admin", "editor"].includes(r.role));
-    if (!isAuthorized) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const isAuthorized = roles?.some((r: any) => ["admin", "editor"].includes(r.role));
+      if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      console.log("[Cron] Scheduled execution — bypassing user auth");
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
