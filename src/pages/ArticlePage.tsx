@@ -16,19 +16,23 @@ import { stripSyndicationText } from "@/lib/stripSyndication";
 // No placeholder allowed — only original source images
 
 function generateSchemaOrg(article: any, url: string) {
+  const toISO3 = (d: string) => {
+    const dt = new Date(d);
+    return dt.toISOString().replace("Z", "-03:00");
+  };
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: article.title,
     description: article.excerpt || "",
-    image: article.image_url || undefined,
-    datePublished: article.published_at,
-    dateModified: article.updated_at || article.published_at,
-    author: { "@type": "Organization", name: "Redação Melhor News" },
+    image: article.image_url ? [article.image_url] : undefined,
+    datePublished: toISO3(article.published_at),
+    dateModified: toISO3(article.updated_at || article.published_at),
+    author: { "@type": "Organization", name: "Melhor News SC" },
     publisher: {
       "@type": "Organization",
-      name: "Melhor News",
-      logo: { "@type": "ImageObject", url: `${window.location.origin}/favicon.ico` },
+      name: "Melhor News SC",
+      logo: { "@type": "ImageObject", url: "https://melhornews.com.br/logo.png" },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     articleSection: article.categories?.name || "Notícias",
@@ -88,18 +92,19 @@ const ArticlePage = () => {
       <Helmet>
         <title>{article.title} | Melhor News</title>
         <meta name="description" content={metaDescription} />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={metaDescription} />
         {imageUrl && <meta property="og:image" content={imageUrl} />}
         <meta property="og:type" content="article" />
-        <meta property="og:url" content={currentUrl} />
+        <meta property="og:url" content={`https://melhornews.com.br/noticia/${slug}`} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={metaDescription} />
         {imageUrl && <meta name="twitter:image" content={imageUrl} />}
-        <link rel="canonical" href={currentUrl} />
+        <link rel="canonical" href={`https://melhornews.com.br/noticia/${slug}`} />
         <script type="application/ld+json">
-          {JSON.stringify(generateSchemaOrg(article, currentUrl))}
+          {JSON.stringify(generateSchemaOrg(article, `https://melhornews.com.br/noticia/${slug}`))}
         </script>
       </Helmet>
 

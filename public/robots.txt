@@ -1,8 +1,12 @@
 User-agent: Googlebot
-Allow: /
+Allow: /noticia/
+Disallow: /admin/
+Disallow: /auth
 
 User-agent: Bingbot
-Allow: /
+Allow: /noticia/
+Disallow: /admin/
+Disallow: /auth
 
 User-agent: Twitterbot
 Allow: /
@@ -11,6 +15,8 @@ User-agent: facebookexternalhit
 Allow: /
 
 User-agent: *
-Allow: /
+Allow: /noticia/
+Disallow: /admin/
+Disallow: /auth
 
-Sitemap: https://utieomsccmxmfblrcsuj.supabase.co/storage/v1/object/public/site-assets/sitemap.xml
+Sitemap: https://melhornews.com.br/sitemap.xml
