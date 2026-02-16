@@ -94,10 +94,30 @@ Deno.serve(async (req) => {
     if (!serviceAccountJson) {
       throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON secret not configured");
     }
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    
+    console.log("[Google Indexing] Secret length:", serviceAccountJson.length, "starts with:", serviceAccountJson.substring(0, 5));
+    
+    // Clean potential BOM or surrounding quotes
+    let cleanJson = serviceAccountJson.trim();
+    if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
+      cleanJson = JSON.parse(cleanJson); // unwrap double-quoted string
+    }
+    const serviceAccount = JSON.parse(cleanJson);
 
-    const body = await req.json();
-    const { record, type: triggerType } = body;
+    // Parse body - handle both string and JSON formats from pg_net
+    const rawBody = await req.text();
+    console.log("[Google Indexing] Raw body length:", rawBody.length, "first chars:", rawBody.substring(0, 100));
+    let parsedBody: any;
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      try {
+        parsedBody = JSON.parse(JSON.parse(rawBody));
+      } catch {
+        throw new Error(`Cannot parse body: ${rawBody.substring(0, 200)}`);
+      }
+    }
+    const { record, type: triggerType } = parsedBody;
 
     // Determine what to notify
     let urls: string[] = [];
