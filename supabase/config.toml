@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.google-indexing]
 verify_jwt = false
+
+[functions.prerender]
+verify_jwt = false
