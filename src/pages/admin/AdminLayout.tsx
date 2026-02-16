@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <div className="min-h-screen flex bg-muted">
+    <>
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+      <div className="min-h-screen flex bg-muted">
       {/* Sidebar */}
       <aside className="w-64 bg-primary text-primary-foreground flex flex-col">
         <div className="p-4 border-b border-primary-foreground/10">
@@ -93,6 +98,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         {children}
       </main>
     </div>
+    </>
   );
 };
 
