@@ -8,17 +8,6 @@ const corsHeaders = {
 
 const SITE_URL = "https://melhornews.com.br";
 
-const STATIC_PAGES = [
-  { loc: "/", priority: "1.0", changefreq: "hourly" },
-  { loc: "/contato", priority: "0.3", changefreq: "monthly" },
-  { loc: "/sobre", priority: "0.3", changefreq: "monthly" },
-  { loc: "/privacidade", priority: "0.2", changefreq: "monthly" },
-  { loc: "/termos", priority: "0.2", changefreq: "monthly" },
-  { loc: "/equipe", priority: "0.3", changefreq: "monthly" },
-  { loc: "/publicidade", priority: "0.3", changefreq: "monthly" },
-  { loc: "/etica-editorial", priority: "0.2", changefreq: "monthly" },
-];
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -29,12 +18,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch categories
-    const { data: categories } = await supabase
-      .from("categories")
-      .select("slug, created_at");
-
-    // Fetch ALL published articles (paginated)
+    // Fetch ONLY published articles (paginated)
     const allArticles: { slug: string; published_at: string; updated_at: string }[] = [];
     let page = 0;
     const pageSize = 1000;
@@ -58,43 +42,21 @@ Deno.serve(async (req) => {
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 `;
 
-    // Static pages
-    for (const p of STATIC_PAGES) {
-      xml += `  <url>
-    <loc>${SITE_URL}${p.loc}</loc>
-    <changefreq>${p.changefreq}</changefreq>
-    <priority>${p.priority}</priority>
-  </url>
-`;
-    }
-
-    // Category pages
-    if (categories) {
-      for (const cat of categories) {
-        xml += `  <url>
-    <loc>${SITE_URL}/categoria/${cat.slug}</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-`;
-      }
-    }
-
-    // Article pages
+    // ONLY article pages — no static pages, no categories
     for (const article of allArticles) {
       const lastmod = article.updated_at || article.published_at;
       xml += `  <url>
     <loc>${SITE_URL}/noticia/${article.slug}</loc>
     <lastmod>${new Date(lastmod).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>1.0</priority>
   </url>
 `;
     }
 
     xml += `</urlset>`;
 
-    // Upload to storage bucket for public access on same-domain via robots.txt
+    // Upload to storage bucket
     const { error: uploadError } = await supabase.storage
       .from("site-assets")
       .upload("sitemap.xml", new Blob([xml], { type: "application/xml" }), {
