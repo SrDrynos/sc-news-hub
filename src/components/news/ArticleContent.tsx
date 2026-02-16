@@ -25,6 +25,15 @@ function cleanScrapedContent(raw: string): string[] {
 
   // Remove truncation markers like [+981 chars]
 
+  // Remove leading navigation/menu artifacts: "! Buscar Sem Categoria #" etc.
+  text = text.replace(/^[\s!]*Buscar\s+(Sem\s+Categoria\s*)?#?\s*/i, "");
+
+  // Remove date stamps like "15/02/2026"
+  text = text.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, "");
+
+  // Remove "! Foto: Divulgação" and similar
+  text = text.replace(/!\s*Foto:\s*[^\n]*/gi, "");
+
   // Convert block-level HTML tags to paragraph breaks before stripping
   text = text.replace(/<\/?(p|div|section|article|aside|header|footer|figure|figcaption|blockquote|pre|ul|ol|li|dl|dt|dd|br|hr)[^>]*>/gi, "\n\n");
   text = text.replace(/<\/?(h[1-6])[^>]*>/gi, "\n\n");
@@ -32,8 +41,8 @@ function cleanScrapedContent(raw: string): string[] {
   // Remove remaining HTML tags
   text = text.replace(/<[^>]+>/g, " ");
 
-  // Remove markdown headings
-  text = text.replace(/^#{1,6}\s+.*$/gm, "");
+  // Convert markdown headings to paragraph breaks, keeping text (both at line start and inline)
+  text = text.replace(/#{1,6}\s+/g, "\n\n");
   text = text.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
 
   // Remove markdown links [text](url)
