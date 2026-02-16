@@ -3,10 +3,31 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const SITE_URL = "https://melhornews.com.br";
+
+function getPriority(publishedAt: string): string {
+  const now = Date.now();
+  const pub = new Date(publishedAt).getTime();
+  const hoursAgo = (now - pub) / (1000 * 60 * 60);
+  if (hoursAgo < 6) return "1.0";
+  if (hoursAgo < 24) return "0.9";
+  if (hoursAgo < 72) return "0.8";
+  if (hoursAgo < 168) return "0.7";
+  return "0.6";
+}
+
+function getChangefreq(publishedAt: string): string {
+  const now = Date.now();
+  const pub = new Date(publishedAt).getTime();
+  const daysAgo = (now - pub) / (1000 * 60 * 60 * 24);
+  if (daysAgo < 1) return "hourly";
+  if (daysAgo < 7) return "daily";
+  if (daysAgo < 30) return "weekly";
+  return "monthly";
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,7 +39,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch ONLY published articles (paginated)
+    // Fetch ALL published articles (paginated)
     const allArticles: { slug: string; published_at: string; updated_at: string }[] = [];
     let page = 0;
     const pageSize = 1000;
@@ -28,6 +49,8 @@ Deno.serve(async (req) => {
         .select("slug, published_at, updated_at")
         .eq("status", "published")
         .not("slug", "is", null)
+        .not("published_at", "is", null)
+        .lte("published_at", new Date().toISOString())
         .order("published_at", { ascending: false })
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -42,21 +65,22 @@ Deno.serve(async (req) => {
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 `;
 
-    // ONLY article pages — no static pages, no categories
     for (const article of allArticles) {
       const lastmod = article.updated_at || article.published_at;
+      const priority = getPriority(article.published_at);
+      const changefreq = getChangefreq(article.published_at);
       xml += `  <url>
     <loc>${SITE_URL}/noticia/${article.slug}</loc>
     <lastmod>${new Date(lastmod).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
   </url>
 `;
     }
 
     xml += `</urlset>`;
 
-    // Upload to storage bucket
+    // Upload to storage bucket for static access
     const { error: uploadError } = await supabase.storage
       .from("site-assets")
       .upload("sitemap.xml", new Blob([xml], { type: "application/xml" }), {
