@@ -32,10 +32,12 @@ async function getAccessToken(serviceAccount: { client_email: string; private_ke
   const signInput = `${headerB64}.${payloadB64}`;
 
   // Import the private key for signing
-  const pemContents = serviceAccount.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\n/g, "");
+  // Clean private key: strip PEM headers first, then extract base64
+  const cleanKey = serviceAccount.private_key.replace(/\\n/g, "\n");
+  const pemContents = cleanKey
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
   const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
 
   const key = await crypto.subtle.importKey(
@@ -90,19 +92,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
-    if (!serviceAccountJson) {
-      throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON secret not configured");
+    const clientEmail = Deno.env.get("GOOGLE_SA_CLIENT_EMAIL");
+    const privateKey = Deno.env.get("GOOGLE_SA_PRIVATE_KEY");
+    if (!clientEmail || !privateKey) {
+      throw new Error("GOOGLE_SA_CLIENT_EMAIL or GOOGLE_SA_PRIVATE_KEY secret not configured");
     }
     
-    console.log("[Google Indexing] Secret length:", serviceAccountJson.length, "starts with:", serviceAccountJson.substring(0, 5));
+    console.log("[Google Indexing] client_email:", clientEmail, "key length:", privateKey.length);
     
-    // Clean potential BOM or surrounding quotes
-    let cleanJson = serviceAccountJson.trim();
-    if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
-      cleanJson = JSON.parse(cleanJson); // unwrap double-quoted string
-    }
-    const serviceAccount = JSON.parse(cleanJson);
+    // Restore newlines that may have been escaped
+    const serviceAccount = {
+      client_email: clientEmail,
+      private_key: privateKey.replace(/\\n/g, "\n"),
+    };
 
     // Parse body - handle both string and JSON formats from pg_net
     const rawBody = await req.text();
