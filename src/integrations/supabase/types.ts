@@ -22,6 +22,7 @@ export type Database = {
           content: string | null
           created_at: string
           excerpt: string | null
+          google_indexed_at: string | null
           id: string
           image_caption: string | null
           image_url: string | null
@@ -47,6 +48,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           excerpt?: string | null
+          google_indexed_at?: string | null
           id?: string
           image_caption?: string | null
           image_url?: string | null
@@ -72,6 +74,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           excerpt?: string | null
+          google_indexed_at?: string | null
           id?: string
           image_caption?: string | null
           image_url?: string | null
