@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Image as ImageIcon, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Upload, Image as ImageIcon, CheckCircle2, XCircle, AlertCircle, Globe, RefreshCw, Loader2 } from "lucide-react";
 
 // --- Logo Upload Sub-component ---
 const LogoUploader = ({
@@ -114,6 +115,141 @@ const StatusBadge = ({ status }: { status: "valid" | "invalid" | "empty" }) => {
   if (status === "empty") return <Badge variant="outline" className="gap-1 text-muted-foreground"><AlertCircle className="h-3 w-3" />Não configurado</Badge>;
   if (status === "valid") return <Badge variant="outline" className="gap-1 text-green-600 border-green-300"><CheckCircle2 className="h-3 w-3" />Válido</Badge>;
   return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Inválido</Badge>;
+};
+
+// --- Google Indexing Monitor ---
+const GoogleIndexingPanel = () => {
+  const [stats, setStats] = useState<{ indexed: number; remaining: number; total: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const { toast } = useToast();
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("is_admin");
+      if (!data) return;
+      
+      const { count: indexed } = await supabase
+        .from("articles")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published")
+        .not("google_indexed_at", "is", null);
+      
+      const { count: total } = await supabase
+        .from("articles")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published");
+      
+      setStats({
+        indexed: indexed || 0,
+        remaining: (total || 0) - (indexed || 0),
+        total: total || 0,
+      });
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchStats(); }, []);
+
+  const runBatch = async () => {
+    setBatchRunning(true);
+    try {
+      const res = await supabase.functions.invoke("batch-indexing", {
+        body: { source: "admin-manual" },
+      });
+      if (res.error) throw res.error;
+      const data = res.data as any;
+      toast({
+        title: "Lote concluído!",
+        description: `${data.indexed || 0} indexados, ${data.errors || 0} erros`,
+      });
+      await fetchStats();
+    } catch (err: any) {
+      toast({ title: "Erro ao executar lote", description: err.message, variant: "destructive" });
+    } finally {
+      setBatchRunning(false);
+    }
+  };
+
+  const pct = stats ? (stats.total > 0 ? Math.round((stats.indexed / stats.total) * 100) : 100) : 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Globe className="h-5 w-5" /> Google Indexing API
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Monitoramento da indexação automática no Google. Novas notícias são indexadas instantaneamente. Um cron diário (4h) envia lotes de até 200 URLs.
+        </p>
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Carregando estatísticas...
+          </div>
+        ) : stats ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span>Progresso da indexação</span>
+              <span className="font-mono font-bold">{pct}%</span>
+            </div>
+            <Progress value={pct} className="h-3" />
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-2xl font-bold text-primary">{stats.indexed}</p>
+                <p className="text-xs text-muted-foreground">Indexados</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-2xl font-bold text-orange-500">{stats.remaining}</p>
+                <p className="text-xs text-muted-foreground">Restantes</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total publicados</p>
+              </div>
+            </div>
+
+            {stats.remaining > 0 && (
+              <div className="flex items-center justify-between p-3 rounded-lg border border-dashed">
+                <div className="text-sm">
+                  <p className="font-medium">Previsão: ~{Math.ceil(stats.remaining / 200)} dia(s) restantes</p>
+                  <p className="text-muted-foreground text-xs">Cron envia 200/dia automaticamente às 4h (BRT)</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={runBatch}
+                  disabled={batchRunning}
+                  className="gap-1"
+                >
+                  {batchRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {batchRunning ? "Enviando..." : "Enviar lote agora"}
+                </Button>
+              </div>
+            )}
+
+            {stats.remaining === 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-sm">
+                <CheckCircle2 className="h-4 w-4" />
+                Todas as notícias estão indexadas no Google!
+              </div>
+            )}
+
+            <Button variant="ghost" size="sm" onClick={fetchStats} disabled={loading} className="gap-1">
+              <RefreshCw className="h-3 w-3" /> Atualizar dados
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 };
 
 // --- Main Page ---
@@ -231,6 +367,9 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* ========== GOOGLE INDEXING ========== */}
+        <GoogleIndexingPanel />
 
         {/* ========== MONETIZAÇÃO ========== */}
         <Card>
