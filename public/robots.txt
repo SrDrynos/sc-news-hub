@@ -1,10 +1,12 @@
 User-agent: Googlebot
 Allow: /noticia/
+Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /auth
 
 User-agent: Bingbot
 Allow: /noticia/
+Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /auth
 
@@ -16,6 +18,7 @@ Allow: /
 
 User-agent: *
 Allow: /noticia/
+Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /auth
 
