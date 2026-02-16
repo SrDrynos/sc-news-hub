@@ -22,4 +22,4 @@ Allow: /sitemap.xml
 Disallow: /admin/
 Disallow: /auth
 
-Sitemap: https://melhornews.com.br/sitemap.xml
+Sitemap: https://utieomsccmxmfblrcsuj.supabase.co/storage/v1/object/public/site-assets/sitemap.xml
