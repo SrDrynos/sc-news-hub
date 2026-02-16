@@ -29,5 +29,18 @@ export function stripSyndicationText(text: string): string {
   // Remove arrows with trailing text
   t = t.replace(/\s*[➜→▸►]\s+.*$/gm, "");
 
+  // Remove WhatsApp/social group invitations
+  t = t.replace(/[‹›]*\s*_?Para receber em tempo real.*?clicando neste link\.?_?\s*/gis, "");
+  t = t.replace(/entre no grupo de WhatsApp.*?clicando neste link\.?\s*/gis, "");
+
+  // Remove "Se engaje! Comente nossas matérias" and similar CTA footers
+  t = t.replace(/\s*Se engaj[ea]!?\s*Comente nossas mat[ée]rias\s*/gi, "");
+
+  // Remove isolated social/section labels like "- Polícia Militar" at end
+  t = t.replace(/\s*-\s*(Polícia Militar|Polícia Civil|Bombeiros|Prefeitura)\s*$/gim, "");
+
+  // Remove "‹›" artifacts
+  t = t.replace(/[‹›]+/g, "");
+
   return t.replace(/\s{2,}/g, " ").trim();
 }
