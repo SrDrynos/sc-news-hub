@@ -30,6 +30,8 @@ import SettingsPage from "./pages/admin/SettingsPage";
 import RssPage from "./pages/admin/RssPage";
 import PartnersPage from "./pages/admin/PartnersPage";
 import SocialPage from "./pages/admin/SocialPage";
+import AdsTxtPage from "./pages/AdsTxtPage";
+import SitemapPage from "./pages/SitemapPage";
 import NotFound from "./pages/NotFound";
 
 import AnalyticsProvider from "./components/analytics/AnalyticsProvider";
@@ -58,6 +60,8 @@ const App = () => (
             <Route path="/equipe" element={<TeamPage />} />
             <Route path="/publicidade" element={<AdvertisePage />} />
             <Route path="/etica-editorial" element={<EditorialEthicsPage />} />
+            <Route path="/sitemap.xml" element={<SitemapPage />} />
+            <Route path="/ads.txt" element={<AdsTxtPage />} />
             
             <Route path="/auth" element={<AuthPage />} />
 
