@@ -74,6 +74,8 @@ const ArticlePage = () => {
   if (isLoading) return <ArticlePageSkeleton />;
   if (!article) return <ArticleNotFound />;
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const socialShareUrl = `${supabaseUrl}/functions/v1/social-share?slug=${slug}`;
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
   const catSlug = (article as any).categories?.slug || "geral";
   const catName = (article as any).categories?.name || "Notícias";
@@ -230,7 +232,7 @@ const ArticlePage = () => {
 
             {/* 10. Compartilhamento */}
             <div className="py-4 border-t border-border mb-8">
-              <ShareButtons url={currentUrl} title={article.title} />
+              <ShareButtons url={currentUrl} title={article.title} socialUrl={socialShareUrl} />
             </div>
 
             {/* 11. Notícias Relacionadas */}
