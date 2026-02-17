@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.prerender]
 verify_jwt = false
+
+[functions.batch-indexing]
+verify_jwt = false
