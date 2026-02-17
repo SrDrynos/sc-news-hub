@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     // Try by slug first, then by id
     let { data: article } = await sb
       .from("articles")
-      .select("title, excerpt, subtitle, image_url, slug, id, categories(name)")
+      .select("title, excerpt, subtitle, meta_description, image_url, slug, id, categories(name)")
       .eq("status", "published")
       .eq("slug", slug)
       .maybeSingle();
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     if (!article) {
       const result = await sb
         .from("articles")
-        .select("title, excerpt, subtitle, image_url, slug, id, categories(name)")
+        .select("title, excerpt, subtitle, meta_description, image_url, slug, id, categories(name)")
         .eq("status", "published")
         .eq("id", slug)
         .maybeSingle();
@@ -44,16 +44,26 @@ Deno.serve(async (req) => {
     }
 
     if (!article) {
-      // Redirect to homepage if not found
       return new Response(null, { status: 302, headers: { Location: SITE_URL } });
     }
 
     const articleUrl = `${SITE_URL}/noticia/${article.slug || article.id}`;
     const title = article.title || SITE_NAME;
-    const rawDesc = article.subtitle || article.excerpt || article.title || "";
+    const rawDesc = (article as any).meta_description || article.subtitle || article.excerpt || article.title || "";
     const description = buildDescription(rawDesc, title).substring(0, 300);
     const imageUrl = article.image_url || DEFAULT_IMAGE;
     const category = (article.categories as any)?.name || "Notícias";
+
+    // Detect bot user-agents (Facebook, WhatsApp, LinkedIn, Twitter, Google, etc.)
+    const ua = (req.headers.get("user-agent") || "").toLowerCase();
+    const isBot = /facebookexternalhit|facebot|whatsapp|linkedinbot|twitterbot|telegrambot|slackbot|discordbot|googlebot|bingbot|yandex|baiduspider|pinterest|snapchat/i.test(ua);
+
+    // For bots: serve ONLY OG tags, NO redirect at all
+    // For humans: redirect immediately via JS (not meta refresh which bots follow)
+    const redirectBlock = isBot
+      ? "" // No redirect for bots — they just read the OG tags
+      : `<script>window.location.replace("${articleUrl}");</script>
+  <noscript><a href="${articleUrl}">Clique aqui para ler a notícia</a></noscript>`;
 
     const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -62,7 +72,7 @@ Deno.serve(async (req) => {
   <title>${escapeHtml(title)} | ${SITE_NAME}</title>
   <meta name="description" content="${escapeHtml(description)}">
 
-  <!-- Open Graph / Facebook -->
+  <!-- Open Graph / Facebook / WhatsApp -->
   <meta property="og:type" content="article">
   <meta property="og:url" content="${articleUrl}">
   <meta property="og:title" content="${escapeHtml(title)}">
@@ -80,12 +90,11 @@ Deno.serve(async (req) => {
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${imageUrl}">
 
-  <!-- Redirect user to actual article -->
-  <meta http-equiv="refresh" content="0;url=${articleUrl}">
   <link rel="canonical" href="${articleUrl}">
 </head>
 <body>
-  <p>Redirecionando para <a href="${articleUrl}">${escapeHtml(title)}</a>...</p>
+  ${redirectBlock}
+  <p>${escapeHtml(title)}</p>
 </body>
 </html>`;
 
@@ -113,21 +122,40 @@ function escapeHtml(str: string): string {
 
 function stripHtmlAndJunk(html: string): string {
   let text = html
-    .replace(/<[^>]+>/g, " ")
+    // Remove markdown links: [text](url "title") or [text](url)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    // Remove remaining markdown image syntax
     .replace(/!\[.*?\]\(.*?\)/g, "")
     .replace(/![\w\s]*/g, "")
+    // Remove HTML tags
+    .replace(/<[^>]+>/g, " ")
+    // Remove markdown headings
     .replace(/#{1,6}\s?/g, "")
+    // Remove URLs
     .replace(/https?:\/\/\S+/g, "")
+    // Remove escaped brackets from RSS junk
+    .replace(/\\\[|\\\]/g, "")
+    .replace(/\\\\/g, "")
+    // Remove date patterns like [ 17/02/2026 ]
+    .replace(/\[\s*\d{2}\/\d{2}\/\d{4}\s*\]/g, "")
+    .replace(/\d{2}\/\d{2}\/\d{4}\s*[-–]?\s*\d{2}:\d{2}/g, "")
+    // Remove common RSS/nav junk
     .replace(/[-–—]{2,}/g, " ")
     .replace(/‹|›|«|»/g, "")
     .replace(/Fechar/gi, "")
     .replace(/Foto:\s*[^\n.]+/gi, "")
     .replace(/Por:\s*[^\n.]+/gi, "")
     .replace(/Atualizada?\s*em:\s*[\d\/\s:-]+/gi, "")
-    .replace(/\d{2}\/\d{2}\/\d{4}\s*[-–]?\s*\d{2}:\d{2}/g, "")
+    // Remove "tudo Últimas Notícias" type header junk
+    .replace(/^tudo\s*/i, "")
+    .replace(/Últimas\s+Notícias\s*[-–]?\s*/gi, "")
+    // Remove category labels like "Mídia", "Política", "Geral", "Artigos", etc. when standalone
+    .replace(/\\\s*(Mídia|Política|Geral|Artigos|Esportes|Economia|Educação|Entretenimento|Polícia|Cidades)\s*/gi, " ")
+    // Clean up whitespace
     .replace(/\s+/g, " ")
     .trim();
-  text = text.replace(/^[\s\-–—:•·|]+/, "").trim();
+  // Remove leading junk characters
+  text = text.replace(/^[\s\-–—:•·|,\[\]\\]+/, "").trim();
   return text;
 }
 
@@ -135,6 +163,12 @@ function stripHtmlAndJunk(html: string): string {
 function buildDescription(raw: string, title: string): string {
   let text = stripHtmlAndJunk(raw);
   const titleClean = stripHtmlAndJunk(title);
+  
+  // If after cleaning, text is too short or still looks like junk, fall back to title
+  if (text.length < 20 || /^\[|^\(|^http|Últimas\s+Notícias/i.test(text)) {
+    return titleClean;
+  }
+  
   // Remove leading category word(s) before the title
   const catTitlePattern = new RegExp(`^[A-ZÀ-ÚÇ][a-zà-úç]+\\s+${escapeRegex(titleClean)}`);
   if (catTitlePattern.test(text)) {
@@ -148,7 +182,19 @@ function buildDescription(raw: string, title: string): string {
   text = text.replace(/^[A-ZÀ-ÚÇ][a-zà-úç]+\s+(?=[A-ZÀ-ÚÇ])/, "").trim();
   // Remove leading junk
   text = text.replace(/^[\s\-–—:•·|.]+/, "").trim();
-  return text || titleClean;
+  
+  // If what remains is mostly titles of other articles (contains multiple \\), it's junk
+  if ((text.match(/\\/g) || []).length > 2) {
+    return titleClean;
+  }
+  
+  // Take only the first sentence or meaningful chunk
+  const firstSentence = text.match(/^[^.!?]+[.!?]/);
+  if (firstSentence && firstSentence[0].length > 30) {
+    return firstSentence[0].trim();
+  }
+  
+  return text.length > 10 ? text : titleClean;
 }
 
 function escapeRegex(str: string): string {
