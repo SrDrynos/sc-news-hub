@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
 
     const articleUrl = `${SITE_URL}/noticia/${article.slug || article.id}`;
     const title = article.title || SITE_NAME;
-    const description = (article.subtitle || article.excerpt || article.title || "").substring(0, 300).replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const rawDesc = article.subtitle || article.excerpt || article.title || "";
+    const description = buildDescription(rawDesc, title).substring(0, 300);
     const imageUrl = article.image_url || DEFAULT_IMAGE;
     const category = (article.categories as any)?.name || "Notícias";
 
@@ -108,4 +109,48 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function stripHtmlAndJunk(html: string): string {
+  let text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/![\w\s]*/g, "")
+    .replace(/#{1,6}\s?/g, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[-–—]{2,}/g, " ")
+    .replace(/‹|›|«|»/g, "")
+    .replace(/Fechar/gi, "")
+    .replace(/Foto:\s*[^\n.]+/gi, "")
+    .replace(/Por:\s*[^\n.]+/gi, "")
+    .replace(/Atualizada?\s*em:\s*[\d\/\s:-]+/gi, "")
+    .replace(/\d{2}\/\d{2}\/\d{4}\s*[-–]?\s*\d{2}:\d{2}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  text = text.replace(/^[\s\-–—:•·|]+/, "").trim();
+  return text;
+}
+
+/** Build a clean description: strip junk, remove title echo, find first real sentence */
+function buildDescription(raw: string, title: string): string {
+  let text = stripHtmlAndJunk(raw);
+  const titleClean = stripHtmlAndJunk(title);
+  // Remove leading category word(s) before the title
+  const catTitlePattern = new RegExp(`^[A-ZÀ-ÚÇ][a-zà-úç]+\\s+${escapeRegex(titleClean)}`);
+  if (catTitlePattern.test(text)) {
+    text = text.replace(/^[A-ZÀ-ÚÇ][a-zà-úç]+\s+/, "").trim();
+  }
+  // Remove title if echoed at start
+  if (text.startsWith(titleClean)) {
+    text = text.slice(titleClean.length).replace(/^[\s\-.,:]+/, "").trim();
+  }
+  // Remove remaining leading category-like word
+  text = text.replace(/^[A-ZÀ-ÚÇ][a-zà-úç]+\s+(?=[A-ZÀ-ÚÇ])/, "").trim();
+  // Remove leading junk
+  text = text.replace(/^[\s\-–—:•·|.]+/, "").trim();
+  return text || titleClean;
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
