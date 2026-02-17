@@ -98,14 +98,13 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    return new Response(html, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=300",
-      },
+    const headers = new Headers({
+      ...corsHeaders,
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
     });
+
+    return new Response(html, { status: 200, headers });
   } catch (e: any) {
     console.error("social-share error:", e);
     return new Response(null, { status: 302, headers: { Location: SITE_URL } });
