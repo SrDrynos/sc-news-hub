@@ -245,6 +245,36 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          message: string
+          technical: string | null
+          type: string
+          url: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          message: string
+          technical?: string | null
+          type: string
+          url?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          message?: string
+          technical?: string | null
+          type?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           key: string

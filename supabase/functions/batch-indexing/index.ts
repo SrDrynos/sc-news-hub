@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
 
     if (!articles || articles.length === 0) {
       console.log("[Batch Indexing] No unindexed articles found. All done!");
+      await supabase.from("seo_logs").insert({ type: "SUCCESS", action: "BATCH", message: "Todos os artigos já indexados. Nada a processar." });
       return new Response(JSON.stringify({ message: "All articles already indexed", total: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -166,11 +167,23 @@ Deno.serve(async (req) => {
 
     console.log(`[Batch Indexing] Done: ${successCount} indexed, ${errorCount} errors`);
 
+    // Log to seo_logs
+    await supabase.from("seo_logs").insert({
+      type: errorCount > 0 ? "WARNING" : "SUCCESS",
+      action: "BATCH",
+      message: `Batch concluído: ${successCount} indexados, ${errorCount} erros, ${summary.remaining} restantes`,
+      technical: errors.length > 0 ? JSON.stringify(errors.slice(0, 20)) : null,
+    });
+
     return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("[Batch Indexing] Error:", error);
+    try {
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await supabase.from("seo_logs").insert({ type: "ERROR", action: "BATCH", message: error.message, technical: error.stack });
+    } catch (_) { /* best effort */ }
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

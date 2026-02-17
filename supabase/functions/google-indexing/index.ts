@@ -147,6 +147,20 @@ Deno.serve(async (req) => {
 
     console.log(`Google Indexing API: notified ${results.length} URL(s)`, JSON.stringify(results));
 
+    // Log to seo_logs
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    for (const r of results) {
+      await supabase.from("seo_logs").insert({
+        type: r.status === 200 ? "SUCCESS" : "ERROR",
+        action: "INDEXING_API",
+        url: r.url,
+        message: r.status === 200 ? `Indexado: ${r.url}` : `Erro ${r.status}: ${r.url}`,
+        technical: r.body.substring(0, 500),
+      });
+    }
+
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
