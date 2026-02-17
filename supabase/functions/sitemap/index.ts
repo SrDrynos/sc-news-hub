@@ -60,11 +60,60 @@ Deno.serve(async (req) => {
       page++;
     }
 
+    // Fetch categories and regions for static pages
+    const { data: categories } = await supabase.from("categories").select("slug");
+    const { data: regions } = await supabase.from("regions").select("slug");
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 `;
 
+    // Static pages
+    const staticPages = [
+      { loc: "/", priority: "1.0", changefreq: "hourly" },
+      { loc: "/sobre", priority: "0.3", changefreq: "monthly" },
+      { loc: "/contato", priority: "0.3", changefreq: "monthly" },
+      { loc: "/termos", priority: "0.2", changefreq: "yearly" },
+      { loc: "/privacidade", priority: "0.2", changefreq: "yearly" },
+      { loc: "/etica-editorial", priority: "0.3", changefreq: "monthly" },
+      { loc: "/anuncie", priority: "0.4", changefreq: "monthly" },
+    ];
+
+    for (const page of staticPages) {
+      xml += `  <url>
+    <loc>${SITE_URL}${page.loc}</loc>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>
+`;
+    }
+
+    // Category pages
+    if (categories) {
+      for (const cat of categories) {
+        xml += `  <url>
+    <loc>${SITE_URL}/categoria/${cat.slug}</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+`;
+      }
+    }
+
+    // Region/city pages
+    if (regions) {
+      for (const region of regions) {
+        xml += `  <url>
+    <loc>${SITE_URL}/categoria/regional?cidade=${region.slug}</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+`;
+      }
+    }
+
+    // Article pages
     for (const article of allArticles) {
       const lastmod = article.updated_at || article.published_at;
       const priority = getPriority(article.published_at);
