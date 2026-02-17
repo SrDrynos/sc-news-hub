@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import Layout from "@/components/layout/Layout";
 import HeroSlider from "@/components/news/HeroSlider";
 import CategorySection from "@/components/news/CategorySection";
@@ -6,11 +7,27 @@ import Sidebar from "@/components/news/Sidebar";
 import AdSlot from "@/components/ads/AdSlot";
 import { useCategories } from "@/hooks/useArticles";
 
+const DEFAULT_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/fcnc073RPWQim3ou1YDeDxtwice2/social-images/social-1771108122438-Portal_de_notícias_Melhor_News.webp";
+
 const Index = () => {
   const { data: categories = [] } = useCategories();
 
   return (
     <Layout>
+      <Helmet>
+        <title>Melhor News SC - O Portal de Notícias de Santa Catarina</title>
+        <meta name="description" content="O portal de notícias mais completo de Santa Catarina, com cobertura em política, esportes, economia, cultura e muito mais." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://melhornews.com.br/" />
+        <meta property="og:title" content="Melhor News SC - O Portal de Notícias de Santa Catarina" />
+        <meta property="og:description" content="O portal de notícias mais completo de Santa Catarina, com cobertura em política, esportes, economia, cultura e muito mais." />
+        <meta property="og:image" content={DEFAULT_IMAGE} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Melhor News SC - O Portal de Notícias de Santa Catarina" />
+        <meta name="twitter:description" content="O portal de notícias mais completo de Santa Catarina." />
+        <meta name="twitter:image" content={DEFAULT_IMAGE} />
+        <link rel="canonical" href="https://melhornews.com.br/" />
+      </Helmet>
       <div className="bg-muted py-4">
         <div className="container">
           <AdSlot position="leaderboard_top" />
