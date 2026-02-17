@@ -18,10 +18,10 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // Find published articles that need enrichment (short content OR missing tags)
+    // Find published articles that need enrichment
     const { data: articles, error: fetchErr } = await sb
       .from("articles")
-      .select("id, title, source_url, content, excerpt, subtitle, category_id, city, tags")
+      .select("id, title, source_url, content, excerpt, subtitle, meta_description, category_id, city, tags")
       .eq("status", "published")
       .not("source_url", "is", null)
       .order("created_at", { ascending: true })
@@ -29,12 +29,15 @@ serve(async (req) => {
 
     if (fetchErr) throw fetchErr;
 
-    // Filter: short content (<300 words) OR missing/incomplete tags
+    // Filter: short content OR missing tags OR dirty excerpt/subtitle/meta_description
     const needsEnrichment = (articles || []).filter((a: any) => {
       const text = (a.content || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       const words = text.split(/\s+/).filter(Boolean).length;
       const hasTags = Array.isArray(a.tags) && a.tags.length === 7;
-      return words < 300 || !hasTags;
+      const hasCleanExcerpt = a.excerpt && a.excerpt.length > 50 && !looksLikeJunk(a.excerpt);
+      const hasCleanSubtitle = a.subtitle && a.subtitle.length > 10 && !looksLikeJunk(a.subtitle);
+      const hasMetaDesc = a.meta_description && a.meta_description.length > 50 && !looksLikeJunk(a.meta_description);
+      return words < 300 || !hasTags || !hasCleanExcerpt || !hasCleanSubtitle || !hasMetaDesc;
     });
 
     if (needsEnrichment.length === 0) {
@@ -90,6 +93,9 @@ serve(async (req) => {
         const wordCount = text.split(/\s+/).filter(Boolean).length;
         const needsContent = wordCount < 300;
         const needsTags = !Array.isArray(article.tags) || article.tags.length !== 7;
+        const needsExcerpt = !article.excerpt || article.excerpt.length < 50 || looksLikeJunk(article.excerpt);
+        const needsSubtitle = !article.subtitle || article.subtitle.length < 10 || looksLikeJunk(article.subtitle);
+        const needsMetaDesc = !article.meta_description || article.meta_description.length < 50 || looksLikeJunk(article.meta_description);
 
         // Step 3: Generate content with AI (if needed)
         if (!lovableKey) {
@@ -198,17 +204,76 @@ Responda APENAS com JSON: {"tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag
           }
         }
 
-        // Step 5: Also generate subtitle if missing
+        // Step 5: Generate subtitle, excerpt and meta_description via AI if needed
         let subtitle = article.subtitle;
-        if (!subtitle && newContent) {
-          const plainText = (newContent || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-          subtitle = plainText.substring(0, 200).replace(/\.\s+[^.]*$/, ".");
+        let excerpt = article.excerpt;
+        let metaDescription = article.meta_description;
+
+        if ((needsSubtitle || needsExcerpt || needsMetaDesc) && lovableKey) {
+          const contentForMeta = (newContent || article.content || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          const metaRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content: `Você é um editor de SEO jornalístico brasileiro. Gere metadados limpos para uma notícia.
+
+REGRAS ABSOLUTAS:
+- NUNCA inclua tags HTML, markdown, URLs ou qualquer código
+- NUNCA inclua nomes de sites, fontes ou créditos de imagem
+- NUNCA inclua textos como "Foto:", "Por:", "Leia mais", "Fechar", datas no formato DD/MM/AAAA
+- NUNCA repita o título da notícia no subtitle ou no início do excerpt
+- Escreva em português correto, tom jornalístico neutro e imparcial
+- Responda APENAS com JSON válido`,
+                },
+                {
+                  role: "user",
+                  content: `Título: ${article.title}
+Cidade: ${article.city || "não informada"}
+Conteúdo: ${contentForMeta.substring(0, 3000)}
+
+Gere:
+1. "subtitle": Frase complementar ao título (máx. 25 palavras). NÃO repita o título. Deve agregar contexto novo.
+2. "excerpt": Resumo jornalístico de 2-4 frases (80-150 palavras). Comece direto com os fatos. Sem repetir o título.
+3. "meta_description": Descrição SEO (máx. 155 caracteres). Clara, informativa, sem repetir o título.
+
+JSON: {"subtitle": "...", "excerpt": "...", "meta_description": "..."}`,
+                },
+              ],
+            }),
+          });
+
+          if (metaRes.ok) {
+            try {
+              const metaData = await metaRes.json();
+              let metaJson = (metaData?.choices?.[0]?.message?.content || "").trim();
+              if (metaJson.startsWith("```")) metaJson = metaJson.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+              const parsed = JSON.parse(metaJson);
+
+              if (needsSubtitle && parsed.subtitle && !looksLikeJunk(parsed.subtitle)) {
+                subtitle = cleanMetaText(parsed.subtitle).substring(0, 200);
+              }
+              if (needsExcerpt && parsed.excerpt && !looksLikeJunk(parsed.excerpt)) {
+                excerpt = cleanMetaText(parsed.excerpt).substring(0, 800);
+              }
+              if (needsMetaDesc && parsed.meta_description && !looksLikeJunk(parsed.meta_description)) {
+                metaDescription = cleanMetaText(parsed.meta_description).substring(0, 160);
+              }
+            } catch { console.warn(`[Meta] Failed to parse meta for ${article.id}`); }
+          } else {
+            await metaRes.text(); // consume body
+          }
         }
 
         // Step 6: Update article
         const updateData: any = {};
         if (needsContent && newContent) updateData.content = newContent;
-        if (subtitle && !article.subtitle) updateData.subtitle = subtitle;
+        if (subtitle && subtitle !== article.subtitle) updateData.subtitle = subtitle;
+        if (excerpt && excerpt !== article.excerpt) updateData.excerpt = excerpt;
+        if (metaDescription && metaDescription !== article.meta_description) updateData.meta_description = metaDescription;
         if (generatedTags.length === 7) updateData.tags = generatedTags;
 
         if (Object.keys(updateData).length === 0) {
@@ -240,3 +305,43 @@ Responda APENAS com JSON: {"tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag
     });
   }
 });
+
+/** Detect junk/scraping artifacts in text */
+function looksLikeJunk(text: string): boolean {
+  if (!text) return true;
+  const junkPatterns = [
+    /<[^>]+>/,                        // HTML tags
+    /https?:\/\/\S+/,                 // URLs
+    /Foto:\s/i,                       // Photo credits
+    /Por:\s/i,                        // Author credits
+    /Leia\s+(mais|no|em)/i,           // Read more
+    /Fechar/i,                        // Close button
+    /Buscar\s/i,                      // Search nav
+    /‹|›|«|»/,                        // Nav arrows
+    /appeared first on/i,             // Syndication
+    /\d{2}\/\d{2}\/\d{4}/,           // Date patterns
+    /Atualizada?\s*em:/i,             // Updated at
+    /Se engaje/i,                     // Engagement junk
+    /WhatsApp/i,                      // Social junk
+    /Para receber em tempo real/i,    // Subscription junk
+  ];
+  return junkPatterns.some((p) => p.test(text));
+}
+
+/** Clean a meta text string: remove HTML, URLs, extra whitespace */
+function cleanMetaText(text: string): string {
+  return text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/#{1,6}\s?/g, "")
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
+    .replace(/Foto:\s*[^\n.]+/gi, "")
+    .replace(/Por:\s*[^\n.]+/gi, "")
+    .replace(/[-–—]{2,}/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
