@@ -146,6 +146,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── QUOTA COOLDOWN: check if we already hit 429 today ──
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const { data: recentQuota } = await supabase
+      .from("seo_logs")
+      .select("id")
+      .eq("action", "INDEXING_QUOTA_EXCEEDED")
+      .gte("created_at", todayStart.toISOString())
+      .limit(1);
+    
+    if (recentQuota && recentQuota.length > 0) {
+      console.log(`[Google Indexing] SKIP - quota already exceeded today for ${articleUrl}`);
+      return new Response(JSON.stringify({ message: "Quota exceeded today, skipping silently" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Call Indexing API ──
     let accessToken: string;
     try {
