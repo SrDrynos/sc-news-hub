@@ -21,7 +21,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import AdminArticlesPage from "./pages/admin/ArticlesPage";
 import RecyclePage from "./pages/admin/RecyclePage";
-import SourcesPage from "./pages/admin/SourcesPage";
+
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CoveragePage from "./pages/admin/CoveragePage";
 
@@ -70,7 +70,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
             <Route path="/admin/artigos" element={<AdminLayout><AdminArticlesPage /></AdminLayout>} />
             <Route path="/admin/reciclagem" element={<AdminLayout><RecyclePage /></AdminLayout>} />
-            <Route path="/admin/fontes" element={<AdminLayout><SourcesPage /></AdminLayout>} />
+            
             <Route path="/admin/categorias" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
             <Route path="/admin/cobertura" element={<AdminLayout><CoveragePage /></AdminLayout>} />
             
