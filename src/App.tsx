@@ -20,14 +20,14 @@ import AuthPage from "./pages/AuthPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import AdminArticlesPage from "./pages/admin/ArticlesPage";
-import RecyclePage from "./pages/admin/RecyclePage";
+
 
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CoveragePage from "./pages/admin/CoveragePage";
 
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
-import RssPage from "./pages/admin/RssPage";
+
 import PartnersPage from "./pages/admin/PartnersPage";
 import SocialPage from "./pages/admin/SocialPage";
 import SeoLogsPage from "./pages/admin/SeoLogsPage";
@@ -69,14 +69,14 @@ const App = () => (
             {/* Admin routes */}
             <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
             <Route path="/admin/artigos" element={<AdminLayout><AdminArticlesPage /></AdminLayout>} />
-            <Route path="/admin/reciclagem" element={<AdminLayout><RecyclePage /></AdminLayout>} />
+            
             
             <Route path="/admin/categorias" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
             <Route path="/admin/cobertura" element={<AdminLayout><CoveragePage /></AdminLayout>} />
             
             <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
-            <Route path="/admin/rss" element={<AdminLayout><RssPage /></AdminLayout>} />
+            
             <Route path="/admin/parceiros" element={<AdminLayout><PartnersPage /></AdminLayout>} />
             <Route path="/admin/social" element={<AdminLayout><SocialPage /></AdminLayout>} />
             <Route path="/admin/seo-logs" element={<AdminLayout><SeoLogsPage /></AdminLayout>} />

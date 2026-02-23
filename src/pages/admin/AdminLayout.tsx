@@ -4,18 +4,18 @@ import { Link, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard, Newspaper, Recycle, Settings, Users,
-  FolderOpen, LogOut, Home, Rss, Handshake, Share2, BarChart3, FileSearch
+  LayoutDashboard, Newspaper, Settings, Users,
+  FolderOpen, LogOut, Home, Handshake, Share2, BarChart3, FileSearch
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
   { label: "Artigos", path: "/admin/artigos", icon: Newspaper },
-  { label: "Reciclagem", path: "/admin/reciclagem", icon: Recycle },
+  
   { label: "Cobertura", path: "/admin/cobertura", icon: BarChart3 },
   
   { label: "Categorias", path: "/admin/categorias", icon: FolderOpen },
-  { label: "RSS Feeds", path: "/admin/rss", icon: Rss },
+  
   { label: "Parceiros", path: "/admin/parceiros", icon: Handshake },
   { label: "Gestão Social", path: "/admin/social", icon: Share2 },
   { label: "Logs SEO", path: "/admin/seo-logs", icon: FileSearch, adminOnly: true },
