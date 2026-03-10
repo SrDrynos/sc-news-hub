@@ -17,8 +17,6 @@ const navItems = [
   { label: "Categorias", path: "/admin/categorias", icon: FolderOpen },
   
   { label: "Parceiros", path: "/admin/parceiros", icon: Handshake },
-  { label: "Gestão Social", path: "/admin/social", icon: Share2 },
-  { label: "Logs SEO", path: "/admin/seo-logs", icon: FileSearch, adminOnly: true },
   { label: "Usuários", path: "/admin/usuarios", icon: Users, adminOnly: true },
   { label: "Configurações", path: "/admin/configuracoes", icon: Settings, adminOnly: true },
 ];

@@ -76,8 +76,6 @@ const App = () => (
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
             
             <Route path="/admin/parceiros" element={<AdminLayout><PartnersPage /></AdminLayout>} />
-            <Route path="/admin/social" element={<AdminLayout><SocialPage /></AdminLayout>} />
-            <Route path="/admin/seo-logs" element={<AdminLayout><SeoLogsPage /></AdminLayout>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
