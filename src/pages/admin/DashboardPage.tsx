@@ -16,7 +16,6 @@ const DashboardPage = () => {
   const published = articles.filter((a) => a.status === "published").length;
   const drafts = articles.filter((a) => a.status === "draft").length;
   const recycled = articles.filter((a) => a.status === "recycled").length;
-  const activeSources = (sources || []).filter((s: any) => s.active).length;
 
   const autoPublishEnabled = settings?.auto_publish?.enabled ?? false;
 
