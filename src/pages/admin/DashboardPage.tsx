@@ -1,9 +1,10 @@
-import { useAllArticles, useNewsSources, useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
+import { useAllArticles, useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Newspaper, Recycle, Globe, CheckCircle, AlertCircle } from "lucide-react";
+import { Newspaper, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ApiMonitorPanel from "@/components/admin/ApiMonitorPanel";
 
 const DashboardPage = () => {
   const { isAdmin } = useAuth();
