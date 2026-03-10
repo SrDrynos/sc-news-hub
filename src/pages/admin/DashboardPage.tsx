@@ -1,14 +1,14 @@
-import { useAllArticles, useNewsSources, useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
+import { useAllArticles, useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Newspaper, Recycle, Globe, CheckCircle, AlertCircle } from "lucide-react";
+import { Newspaper, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ApiMonitorPanel from "@/components/admin/ApiMonitorPanel";
 
 const DashboardPage = () => {
   const { isAdmin } = useAuth();
   const { data: articles = [] } = useAllArticles();
-  const { data: sources = [] } = useNewsSources();
   const { data: settings } = useSystemSettings();
   const updateSetting = useUpdateSetting();
   const { toast } = useToast();
@@ -16,7 +16,6 @@ const DashboardPage = () => {
   const published = articles.filter((a) => a.status === "published").length;
   const drafts = articles.filter((a) => a.status === "draft").length;
   const recycled = articles.filter((a) => a.status === "recycled").length;
-  const activeSources = (sources || []).filter((s: any) => s.active).length;
 
   const autoPublishEnabled = settings?.auto_publish?.enabled ?? false;
 
@@ -61,8 +60,13 @@ const DashboardPage = () => {
         </Card>
       )}
 
+      {/* API Monitor */}
+      <div className="mb-8">
+        <ApiMonitorPanel />
+      </div>
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Publicadas</CardTitle>
@@ -84,19 +88,10 @@ const DashboardPage = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Reciclagem</CardTitle>
-            <Recycle className="h-4 w-4 text-red-500" />
+            <Newspaper className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{recycled}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fontes Ativas</CardTitle>
-            <Globe className="h-4 w-4 text-secondary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeSources}</div>
           </CardContent>
         </Card>
       </div>
