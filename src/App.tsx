@@ -29,8 +29,6 @@ import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
 import PartnersPage from "./pages/admin/PartnersPage";
-import SocialPage from "./pages/admin/SocialPage";
-import SeoLogsPage from "./pages/admin/SeoLogsPage";
 import AdsTxtPage from "./pages/AdsTxtPage";
 import SitemapPage from "./pages/SitemapPage";
 import NotFound from "./pages/NotFound";
@@ -78,8 +76,6 @@ const App = () => (
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
             
             <Route path="/admin/parceiros" element={<AdminLayout><PartnersPage /></AdminLayout>} />
-            <Route path="/admin/social" element={<AdminLayout><SocialPage /></AdminLayout>} />
-            <Route path="/admin/seo-logs" element={<AdminLayout><SeoLogsPage /></AdminLayout>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
