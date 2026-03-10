@@ -9,7 +9,6 @@ import ApiMonitorPanel from "@/components/admin/ApiMonitorPanel";
 const DashboardPage = () => {
   const { isAdmin } = useAuth();
   const { data: articles = [] } = useAllArticles();
-  const { data: sources = [] } = useNewsSources();
   const { data: settings } = useSystemSettings();
   const updateSetting = useUpdateSetting();
   const { toast } = useToast();
