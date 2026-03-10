@@ -29,8 +29,6 @@ import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
 import PartnersPage from "./pages/admin/PartnersPage";
-import SocialPage from "./pages/admin/SocialPage";
-import SeoLogsPage from "./pages/admin/SeoLogsPage";
 import AdsTxtPage from "./pages/AdsTxtPage";
 import SitemapPage from "./pages/SitemapPage";
 import NotFound from "./pages/NotFound";
