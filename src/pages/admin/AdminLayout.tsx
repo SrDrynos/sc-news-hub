@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Settings, Users,
-  FolderOpen, LogOut, Home, Handshake, Share2, BarChart3, FileSearch
+  FolderOpen, LogOut, Home, Handshake, BarChart3
 } from "lucide-react";
 
 const navItems = [
