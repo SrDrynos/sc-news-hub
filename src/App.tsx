@@ -22,8 +22,7 @@ import DashboardPage from "./pages/admin/DashboardPage";
 import AdminArticlesPage from "./pages/admin/ArticlesPage";
 
 
-import CategoriesPage from "./pages/admin/CategoriesPage";
-import CoveragePage from "./pages/admin/CoveragePage";
+
 
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
