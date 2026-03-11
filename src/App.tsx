@@ -70,8 +70,6 @@ const App = () => (
             
             
             <Route path="/admin/categorias" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
-            <Route path="/admin/cobertura" element={<AdminLayout><CoveragePage /></AdminLayout>} />
-            
             <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
             
