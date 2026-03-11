@@ -33,14 +33,15 @@ const REGIONAL_CITIES = [
   { label: "Palhoça", slug: "palhoca-sc" },
 ];
 
-// MENU OFICIAL FIXO – 8 itens, ordem obrigatória
+// MENU OFICIAL FIXO – categorias atualizadas
 const MENU_ITEMS = [
   { label: "Início", to: "/" },
   { label: "Regional", to: "/categoria/cidades", hasSubmenu: true },
+  { label: "Crime", to: "/categoria/crime" },
   { label: "Economia", to: "/categoria/economia" },
-  { label: "Educação", to: "/categoria/educacao" },
   { label: "Política", to: "/categoria/politica" },
-  { label: "Polícia", to: "/categoria/policia" },
+  { label: "Internacional", to: "/categoria/internacional" },
+  { label: "Saúde", to: "/categoria/saude" },
   { label: "Esportes", to: "/categoria/esportes" },
   { label: "Entretenimento", to: "/categoria/entretenimento" },
 ];
