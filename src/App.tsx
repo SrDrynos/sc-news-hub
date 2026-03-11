@@ -20,15 +20,12 @@ import AuthPage from "./pages/AuthPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import AdminArticlesPage from "./pages/admin/ArticlesPage";
-
-
 import CategoriesPage from "./pages/admin/CategoriesPage";
-import CoveragePage from "./pages/admin/CoveragePage";
 
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
-import PartnersPage from "./pages/admin/PartnersPage";
+
 import AdsTxtPage from "./pages/AdsTxtPage";
 import SitemapPage from "./pages/SitemapPage";
 import NotFound from "./pages/NotFound";
@@ -70,12 +67,10 @@ const App = () => (
             
             
             <Route path="/admin/categorias" element={<AdminLayout><CategoriesPage /></AdminLayout>} />
-            <Route path="/admin/cobertura" element={<AdminLayout><CoveragePage /></AdminLayout>} />
-            
             <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
             <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />
             
-            <Route path="/admin/parceiros" element={<AdminLayout><PartnersPage /></AdminLayout>} />
+            
 
             <Route path="*" element={<NotFound />} />
           </Routes>
