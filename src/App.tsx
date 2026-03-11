@@ -20,9 +20,7 @@ import AuthPage from "./pages/AuthPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import AdminArticlesPage from "./pages/admin/ArticlesPage";
-
-
-
+import CategoriesPage from "./pages/admin/CategoriesPage";
 
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
