@@ -277,20 +277,6 @@ const SettingsPage = () => {
     toast({ title: "Monetização salva!" });
   };
 
-  const AD_POSITIONS = [
-    { key: "leaderboard_top", label: "Leaderboard Topo", defaultSize: "728x90" },
-    { key: "content_1", label: "Conteúdo (após 3º §)", defaultSize: "336x280" },
-    { key: "content_2", label: "Conteúdo (após 7º §)", defaultSize: "336x280" },
-    { key: "sidebar", label: "Sidebar", defaultSize: "300x250" },
-    { key: "below_article", label: "Abaixo da Notícia", defaultSize: "728x90" },
-  ];
-
-  const saveAdSlot = async (position: string, update: Record<string, any>) => {
-    const current = adSlots[position] || {};
-    const newSlots = { ...adSlots, [position]: { ...current, ...update } };
-    await updateSetting.mutateAsync({ key: "ad_slots", value: newSlots });
-    toast({ title: "Slot de anúncio salvo!" });
-  };
 
   return (
     <div>
