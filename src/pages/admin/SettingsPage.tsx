@@ -262,7 +262,6 @@ const SettingsPage = () => {
 
   const analytics = (settings?.analytics as any) || { ga4_id: "", gtm_id: "" };
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
-  const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
 
 
   const saveAnalytics = async (update: Partial<typeof analytics>) => {
