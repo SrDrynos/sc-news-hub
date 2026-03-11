@@ -363,5 +363,9 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+};
 
 export default SettingsPage;
