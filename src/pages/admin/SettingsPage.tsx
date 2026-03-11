@@ -260,7 +260,6 @@ const SettingsPage = () => {
 
   if (isLoading) return <p>Carregando...</p>;
 
-  const branding = (settings?.branding as any) || { logo_light_url: "", logo_dark_url: "" };
   const analytics = (settings?.analytics as any) || { ga4_id: "", gtm_id: "" };
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
   const adSlots = (settings?.ad_slots as any) || {};
