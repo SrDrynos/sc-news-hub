@@ -12,11 +12,8 @@ const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
   { label: "Artigos", path: "/admin/artigos", icon: Newspaper },
   
-  { label: "Cobertura", path: "/admin/cobertura", icon: BarChart3 },
-  
   { label: "Categorias", path: "/admin/categorias", icon: FolderOpen },
-  
-  { label: "Parceiros", path: "/admin/parceiros", icon: Handshake },
+
   { label: "Usuários", path: "/admin/usuarios", icon: Users, adminOnly: true },
   { label: "Configurações", path: "/admin/configuracoes", icon: Settings, adminOnly: true },
 ];
