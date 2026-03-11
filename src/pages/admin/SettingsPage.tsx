@@ -264,11 +264,6 @@ const SettingsPage = () => {
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
 
-  const saveBranding = async (update: Partial<typeof branding>) => {
-    const newVal = { ...branding, ...update };
-    await updateSetting.mutateAsync({ key: "branding", value: newVal });
-    toast({ title: "Branding salvo!" });
-  };
 
   const saveAnalytics = async (update: Partial<typeof analytics>) => {
     const newVal = { ...analytics, ...update };
