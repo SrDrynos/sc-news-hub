@@ -283,32 +283,6 @@ const SettingsPage = () => {
       <h1 className="text-3xl font-heading font-bold mb-6">Configurações</h1>
 
       <div className="space-y-6">
-        {/* ========== BRANDING ========== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5" /> Branding
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Upload do logo principal do site. Versões light e dark.
-            </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <LogoUploader
-                label="Logo Light (fundo claro)"
-                currentUrl={branding.logo_light_url || ""}
-                onUploaded={(url) => saveBranding({ logo_light_url: url })}
-              />
-              <LogoUploader
-                label="Logo Dark (fundo escuro)"
-                currentUrl={branding.logo_dark_url || ""}
-                onUploaded={(url) => saveBranding({ logo_dark_url: url })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* ========== ANALYTICS ========== */}
         <Card>
           <CardHeader>
