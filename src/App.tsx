@@ -27,7 +27,7 @@ import AdminArticlesPage from "./pages/admin/ArticlesPage";
 import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
-import PartnersPage from "./pages/admin/PartnersPage";
+
 import AdsTxtPage from "./pages/AdsTxtPage";
 import SitemapPage from "./pages/SitemapPage";
 import NotFound from "./pages/NotFound";
