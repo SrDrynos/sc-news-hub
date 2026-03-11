@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSystemSettings, useUpdateSetting } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,84 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Image as ImageIcon, CheckCircle2, XCircle, AlertCircle, Globe, RefreshCw, Loader2 } from "lucide-react";
-
-// --- Logo Upload Sub-component ---
-const LogoUploader = ({
-  label,
-  currentUrl,
-  onUploaded,
-}: {
-  label: string;
-  currentUrl: string;
-  onUploaded: (url: string) => void;
-}) => {
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Selecione um arquivo de imagem", variant: "destructive" });
-      return;
-    }
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const fileName = `logo-${label.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("site-assets").upload(fileName, file, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(fileName);
-      onUploaded(urlData.publicUrl);
-      toast({ title: "Logo enviado!" });
-    } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder="URL do logo"
-          value={currentUrl}
-          onChange={(e) => onUploaded(e.target.value)}
-          className="flex-1"
-        />
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="gap-1 shrink-0"
-        >
-          <Upload className="h-4 w-4" />
-          {uploading ? "Enviando..." : "Upload"}
-        </Button>
-      </div>
-      {currentUrl && (
-        <div className="bg-muted rounded p-3 flex items-center justify-center">
-          <img
-            src={currentUrl}
-            alt={label}
-            className="max-h-16 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
+import { CheckCircle2, XCircle, AlertCircle, Globe, RefreshCw, Loader2 } from "lucide-react";
 
 // --- Validation helpers ---
 function validateGaId(id: string): "valid" | "invalid" | "empty" {
@@ -260,17 +183,9 @@ const SettingsPage = () => {
 
   if (isLoading) return <p>Carregando...</p>;
 
-  const branding = (settings?.branding as any) || { logo_light_url: "", logo_dark_url: "" };
   const analytics = (settings?.analytics as any) || { ga4_id: "", gtm_id: "" };
   const monetization = (settings?.monetization as any) || { adsense_publisher_id: "", ads_txt: "" };
-  const adSlots = (settings?.ad_slots as any) || {};
-  const scoringWeights = settings?.scoring_weights;
 
-  const saveBranding = async (update: Partial<typeof branding>) => {
-    const newVal = { ...branding, ...update };
-    await updateSetting.mutateAsync({ key: "branding", value: newVal });
-    toast({ title: "Branding salvo!" });
-  };
 
   const saveAnalytics = async (update: Partial<typeof analytics>) => {
     const newVal = { ...analytics, ...update };
@@ -284,52 +199,12 @@ const SettingsPage = () => {
     toast({ title: "Monetização salva!" });
   };
 
-  const AD_POSITIONS = [
-    { key: "leaderboard_top", label: "Leaderboard Topo", defaultSize: "728x90" },
-    { key: "content_1", label: "Conteúdo (após 3º §)", defaultSize: "336x280" },
-    { key: "content_2", label: "Conteúdo (após 7º §)", defaultSize: "336x280" },
-    { key: "sidebar", label: "Sidebar", defaultSize: "300x250" },
-    { key: "below_article", label: "Abaixo da Notícia", defaultSize: "728x90" },
-  ];
-
-  const saveAdSlot = async (position: string, update: Record<string, any>) => {
-    const current = adSlots[position] || {};
-    const newSlots = { ...adSlots, [position]: { ...current, ...update } };
-    await updateSetting.mutateAsync({ key: "ad_slots", value: newSlots });
-    toast({ title: "Slot de anúncio salvo!" });
-  };
 
   return (
     <div>
       <h1 className="text-3xl font-heading font-bold mb-6">Configurações</h1>
 
       <div className="space-y-6">
-        {/* ========== BRANDING ========== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5" /> Branding
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Upload do logo principal do site. Versões light e dark.
-            </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <LogoUploader
-                label="Logo Light (fundo claro)"
-                currentUrl={branding.logo_light_url || ""}
-                onUploaded={(url) => saveBranding({ logo_light_url: url })}
-              />
-              <LogoUploader
-                label="Logo Dark (fundo escuro)"
-                currentUrl={branding.logo_dark_url || ""}
-                onUploaded={(url) => saveBranding({ logo_dark_url: url })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* ========== ANALYTICS ========== */}
         <Card>
           <CardHeader>
@@ -410,100 +285,6 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* ========== AD MANAGER (GPT) ========== */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Google Ad Manager (GPT)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Configure os blocos de anúncio do Google Ad Manager. Deixe vazio para usar a rede de testes do Google.
-            </p>
-            <div className="space-y-4">
-              {AD_POSITIONS.map(({ key, label, defaultSize }) => {
-                const slot = adSlots[key] || {};
-                return (
-                  <div key={key} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{label}</p>
-                        <p className="text-[10px] text-muted-foreground">Tamanho padrão: {defaultSize}</p>
-                      </div>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={slot.enabled !== false}
-                          onChange={(e) => saveAdSlot(key, { enabled: e.target.checked })}
-                          className="rounded"
-                        />
-                        Ativo
-                      </label>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Caminho do bloco de anúncios</Label>
-                        <Input
-                          placeholder="/network-code/ad-unit-code"
-                          value={slot.path || ""}
-                          onChange={(e) => saveAdSlot(key, { path: e.target.value })}
-                          className="font-mono text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Tamanho [largura, altura]</Label>
-                        <Input
-                          placeholder={defaultSize}
-                          value={slot.size ? `${slot.size[0]}x${slot.size[1]}` : ""}
-                          onChange={(e) => {
-                            const parts = e.target.value.split("x").map(Number);
-                            if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-                              saveAdSlot(key, { size: parts });
-                            }
-                          }}
-                          className="font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ========== PESOS DE PONTUAÇÃO (existente) ========== */}
-        {scoringWeights && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Pesos de Pontuação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Configure os pesos para cálculo automático da nota de cada notícia.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(scoringWeights).map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <label className="text-sm flex-1 capitalize">{key.replace(/_/g, " ")}</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={5}
-                      step={0.5}
-                      value={Number(value)}
-                      className="w-20"
-                      onChange={async (e) => {
-                        const newWeights = { ...scoringWeights, [key]: Number(e.target.value) };
-                        await updateSetting.mutateAsync({ key: "scoring_weights", value: newWeights });
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
