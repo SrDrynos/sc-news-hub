@@ -81,8 +81,8 @@ export default {
         },
       },
       fontFamily: {
-        heading: ["Merriweather", "serif"],
-        body: ["Inter", "sans-serif"],
+        heading: ["Playfair Display", "serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
