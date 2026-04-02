@@ -28,20 +28,12 @@ const Index = () => {
         <meta name="twitter:image" content={DEFAULT_IMAGE} />
         <link rel="canonical" href="https://melhornews.com.br/" />
       </Helmet>
-      <div className="bg-muted py-4">
-        <div className="container">
-          <AdSlot position="leaderboard_top" />
-        </div>
-      </div>
+
+      <AdSlot position="leaderboard_top" className="py-3 bg-muted/50" />
 
       <HeroSlider />
 
-      {/* Ad after hero */}
-      <div className="bg-muted py-4">
-        <div className="container">
-          <AdSlot position="after_hero" />
-        </div>
-      </div>
+      <AdSlot position="after_hero" className="py-3 bg-muted/50" />
 
       <div className="container py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -49,27 +41,17 @@ const Index = () => {
             {categories.map((cat, index) => (
               <div key={cat.id}>
                 <CategorySection title={cat.name} slug={cat.slug} color={cat.slug} />
-                {index === 1 && (
-                  <AdSlot position="content_1" className="my-8" />
-                )}
-                {index === 3 && (
-                  <AdSlot position="content_2" className="my-8" />
-                )}
-                {index === 5 && (
-                  <AdSlot position="content_3" className="my-8" />
-                )}
-                {index === 7 && (
-                  <AdSlot position="content_4" className="my-8" />
-                )}
+                {index === 1 && <AdSlot position="content_1" className="my-6" />}
+                {index === 3 && <AdSlot position="content_2" className="my-6" />}
+                {index === 5 && <AdSlot position="content_3" className="my-6" />}
               </div>
             ))}
             {categories.length === 0 && (
               <>
-                <CategorySection title="Santa Catarina" slug="sc" color="sc" />
+                <CategorySection title="Crime" slug="crime" color="crime" />
                 <CategorySection title="Política" slug="politica" color="politica" />
                 <CategorySection title="Esportes" slug="esportes" color="esportes" />
                 <CategorySection title="Economia" slug="economia" color="economia" />
-                <CategorySection title="Cidades" slug="cidades" color="cidades" />
               </>
             )}
           </div>
@@ -77,12 +59,7 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Ad before newsletter */}
-      <div className="bg-muted py-4">
-        <div className="container">
-          <AdSlot position="before_newsletter" />
-        </div>
-      </div>
+      <AdSlot position="before_newsletter" className="py-3 bg-muted/50" />
 
       <Newsletter />
     </Layout>

@@ -1,87 +1,51 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Youtube, Twitter, Mail, Phone, MapPin } from "lucide-react";
-import { categories } from "@/data/mockNews";
+import { Mail, Phone, MapPin } from "lucide-react";
+
+const CATEGORIES = [
+  { name: "Crime", slug: "crime" },
+  { name: "Economia", slug: "economia" },
+  { name: "Política", slug: "politica" },
+  { name: "Internacional", slug: "internacional" },
+  { name: "Saúde", slug: "saude" },
+  { name: "Esportes", slug: "esportes" },
+  { name: "Entretenimento", slug: "entretenimento" },
+];
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-primary text-primary-foreground">
+    <footer className="bg-foreground text-background">
       {/* Aviso Agregador */}
-      <div className="bg-muted py-3 border-b border-border">
-        <div className="container">
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
-            <strong>Aviso Importante:</strong> O Melhor News é um site agregador de notícias. Publicamos apenas resumos informativos e direcionamos o leitor para a fonte original. Não possuímos vínculo com os portais citados e não nos responsabilizamos pelo conteúdo completo publicado em sites externos.
+      <div className="border-b border-background/10">
+        <div className="container py-3">
+          <p className="text-[11px] text-background/40 text-center leading-relaxed">
+            <strong className="text-background/60">Aviso:</strong> O Melhor News é um agregador de notícias. Publicamos resumos e direcionamos o leitor para a fonte original.
           </p>
         </div>
       </div>
 
-      {/* Main Footer */}
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* About */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Brand */}
           <div>
-            <div className="mb-4">
-              <span className="text-2xl font-heading font-bold">Melhor News</span>
-              <span className="text-xl font-heading font-bold text-secondary-foreground/80 ml-1">
-                SC
-              </span>
+            <div className="flex items-baseline gap-1 mb-4">
+              <span className="text-xl font-heading font-bold">Melhor News</span>
+              <span className="text-xs font-semibold text-secondary uppercase tracking-widest">SC</span>
             </div>
-            <p className="text-primary-foreground/80 text-sm mb-4">
-              Centralizamos as notícias mais relevantes de Santa Catarina, com transparência, 
-              credibilidade e respeito às fontes oficiais.
+            <p className="text-background/50 text-sm leading-relaxed">
+              Centralizamos as notícias mais relevantes de Santa Catarina com transparência e respeito às fontes.
             </p>
-            <div className="flex gap-3">
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors"
-                aria-label="YouTube"
-              >
-                <Youtube className="h-5 w-5" />
-              </a>
-            </div>
           </div>
 
           {/* Editorias */}
           <div>
-            <h3 className="text-lg font-heading font-bold mb-4">Editorias</h3>
-            <ul className="space-y-2">
-              {categories.map((category) => (
-                <li key={category.slug}>
-                  <Link
-                    to={`/categoria/${category.slug}`}
-                    className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                  >
-                    {category.name}
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-4 text-background/70">Editorias</h3>
+            <ul className="space-y-2.5">
+              {CATEGORIES.map((cat) => (
+                <li key={cat.slug}>
+                  <Link to={`/categoria/${cat.slug}`} className="text-sm text-background/50 hover:text-background transition-colors">
+                    {cat.name}
                   </Link>
                 </li>
               ))}
@@ -90,110 +54,50 @@ const Footer = () => {
 
           {/* Institucional */}
           <div>
-            <h3 className="text-lg font-heading font-bold mb-4">Institucional</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link
-                  to="/sobre"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Sobre Nós
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/equipe"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Nossa Equipe
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/publicidade"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Anuncie Conosco
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/etica-editorial"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Ética Editorial
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/privacidade"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Política de Privacidade
-                </Link>
-              </li>
-              <li>
-              <Link
-                  to="/termos"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Termos de Uso
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/auth"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  Área Restrita
-                </Link>
-              </li>
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-4 text-background/70">Institucional</h3>
+            <ul className="space-y-2.5">
+              {[
+                { label: "Sobre Nós", to: "/sobre" },
+                { label: "Anuncie Conosco", to: "/publicidade" },
+                { label: "Ética Editorial", to: "/etica-editorial" },
+                { label: "Privacidade", to: "/privacidade" },
+                { label: "Termos de Uso", to: "/termos" },
+              ].map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className="text-sm text-background/50 hover:text-background transition-colors">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contato */}
           <div>
-            <h3 className="text-lg font-heading font-bold mb-4">Contato</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-4 text-background/70">Contato</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <span className="text-primary-foreground/80 text-sm">
-                  Rua Alvaro Avila, 123<br />
-                  Morro Grande - Sangão, SC
-                </span>
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-background/40" />
+                <span className="text-sm text-background/50">Sangão, SC</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="h-5 w-5 flex-shrink-0" />
-                <a
-                  href="tel:+5548991508411"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  (48) 9.9150-8411
-                </a>
+                <Phone className="h-4 w-4 flex-shrink-0 text-background/40" />
+                <a href="tel:+5548991508411" className="text-sm text-background/50 hover:text-background transition-colors">(48) 9.9150-8411</a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="h-5 w-5 flex-shrink-0" />
-                <a
-                  href="mailto:contato@melhornews.com.br"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  contato@melhornews.com.br
-                </a>
+                <Mail className="h-4 w-4 flex-shrink-0 text-background/40" />
+                <a href="mailto:contato@melhornews.com.br" className="text-sm text-background/50 hover:text-background transition-colors">contato@melhornews.com.br</a>
               </li>
             </ul>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-primary-foreground/10">
+      <div className="border-t border-background/10">
         <div className="container py-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-primary-foreground/60">
-            <p>© {currentYear} Melhor News SC. Todos os direitos reservados.</p>
-            <p>
-              Desenvolvido com ❤️ em Santa Catarina
-            </p>
-          </div>
+          <p className="text-xs text-background/30 text-center">
+            © {currentYear} Melhor News SC. Todos os direitos reservados.
+          </p>
         </div>
       </div>
     </footer>

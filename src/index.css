@@ -2,107 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
-    /* Melhor News SC - Design System */
-    --background: 210 33% 98%;
-    --foreground: 215 45% 17%;
+    --background: 0 0% 98%;
+    --foreground: 220 20% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 45% 17%;
+    --card-foreground: 220 20% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 45% 17%;
+    --popover-foreground: 220 20% 14%;
 
-    /* Primary - Azul Escuro Regional */
-    --primary: 215 56% 23%;
+    --primary: 220 65% 18%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Azul Realce */
-    --secondary: 213 58% 43%;
+    --secondary: 220 80% 56%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
 
-    --accent: 213 58% 43%;
+    --accent: 220 80% 56%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 213 58% 43%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 80% 56%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Custom tokens for news portal */
-    --news-primary: 215 56% 23%;
-    --news-secondary: 213 58% 43%;
+    /* News tokens */
+    --news-primary: 220 65% 18%;
+    --news-secondary: 220 80% 56%;
     --news-accent: 38 92% 50%;
-    --news-success: 142 76% 36%;
-    --news-warning: 38 92% 50%;
-    --news-danger: 0 84% 60%;
-    
+
     /* Category colors */
-    --cat-politica: 0 72% 51%;
-    --cat-esportes: 142 76% 36%;
-    --cat-economia: 213 58% 43%;
-    --cat-cultura: 280 68% 50%;
-    --cat-policia: 0 0% 25%;
-    --cat-cidades: 38 92% 50%;
+    --cat-crime: 0 72% 51%;
+    --cat-esportes: 152 60% 40%;
+    --cat-economia: 220 80% 56%;
+    --cat-politica: 262 60% 50%;
+    --cat-internacional: 200 70% 45%;
+    --cat-saude: 152 60% 40%;
+    --cat-entretenimento: 330 65% 55%;
+    --cat-cultura: 280 60% 50%;
+    --cat-ciencia: 200 70% 45%;
+    --cat-lifestyle: 38 80% 50%;
 
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 220 10% 26%;
+    --sidebar-primary: 220 65% 18%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 20% 14%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 220 80% 56%;
   }
 
   .dark {
-    --background: 215 45% 8%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 7%;
+    --foreground: 220 14% 96%;
 
-    --card: 215 45% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 10%;
+    --card-foreground: 220 14% 96%;
 
-    --popover: 215 45% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 220 14% 96%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 215 56% 23%;
+    --primary: 220 14% 96%;
+    --primary-foreground: 220 65% 18%;
 
-    --secondary: 213 58% 43%;
+    --secondary: 220 80% 56%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 215 32% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 60%;
 
-    --accent: 213 58% 43%;
+    --accent: 220 80% 56%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 220 14% 96%;
 
-    --border: 215 32% 17%;
-    --input: 215 32% 17%;
-    --ring: 213 58% 43%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 220 80% 56%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 220 80% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 220 80% 56%;
   }
 }
 
@@ -113,15 +111,17 @@
 
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Merriweather', serif;
+    font-family: 'Playfair Display', serif;
     @apply font-bold tracking-tight;
   }
 }
@@ -129,65 +129,30 @@
 @layer components {
   /* Ad placeholders */
   .ad-banner {
-    @apply bg-muted/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground text-sm;
+    @apply bg-muted/30 border border-dashed border-border/50 rounded-lg flex items-center justify-center text-muted-foreground text-sm;
   }
 
-  .ad-banner-top {
-    @apply h-[90px] w-full max-w-[728px] mx-auto;
-  }
-
-  .ad-banner-sidebar {
-    @apply h-[600px] w-[300px];
-  }
-
-  .ad-banner-inline {
-    @apply h-[250px] w-full max-w-[300px] mx-auto my-6;
-  }
-
-  .ad-banner-footer {
-    @apply h-[90px] w-full max-w-[728px] mx-auto;
-  }
-
-  .ad-banner-mobile {
-    @apply h-[100px] w-full max-w-[320px] mx-auto;
-  }
-
-  /* Category badges */
+  /* Category badges - modern pill style */
   .category-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest;
   }
 
-  .category-badge-politica {
-    @apply bg-red-500/10 text-red-600;
-  }
-
-  .category-badge-esportes {
-    @apply bg-green-500/10 text-green-600;
-  }
-
-  .category-badge-economia {
-    @apply bg-blue-500/10 text-blue-600;
-  }
-
-  .category-badge-cultura {
-    @apply bg-purple-500/10 text-purple-600;
-  }
-
-  .category-badge-policia {
-    @apply bg-gray-500/10 text-gray-600;
-  }
-
-  .category-badge-cidades {
-    @apply bg-amber-500/10 text-amber-600;
-  }
-
-  .category-badge-sc {
-    @apply bg-primary/10 text-primary;
-  }
+  .category-badge-crime { @apply bg-red-500/10 text-red-600; }
+  .category-badge-esportes { @apply bg-emerald-500/10 text-emerald-600; }
+  .category-badge-economia { @apply bg-blue-500/10 text-blue-600; }
+  .category-badge-politica { @apply bg-violet-500/10 text-violet-600; }
+  .category-badge-internacional { @apply bg-sky-500/10 text-sky-600; }
+  .category-badge-saude { @apply bg-emerald-500/10 text-emerald-600; }
+  .category-badge-entretenimento { @apply bg-pink-500/10 text-pink-600; }
+  .category-badge-cultura { @apply bg-purple-500/10 text-purple-600; }
+  .category-badge-ciencia { @apply bg-cyan-500/10 text-cyan-600; }
+  .category-badge-lifestyle { @apply bg-amber-500/10 text-amber-600; }
+  .category-badge-sc { @apply bg-primary/10 text-primary; }
+  .category-badge-geral { @apply bg-muted text-muted-foreground; }
 
   /* News cards hover effects */
   .news-card {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5;
   }
 
   .news-card-image {
@@ -195,21 +160,21 @@
   }
 
   .news-card-image img {
-    @apply transition-transform duration-500 hover:scale-105;
+    @apply transition-transform duration-700 hover:scale-105;
   }
 
-  /* Section headers */
+  /* Section headers - modern line style */
   .section-header {
-    @apply flex items-center gap-3 mb-6 pb-3 border-b-2 border-primary;
+    @apply flex items-center gap-3 mb-8 pb-4 border-b border-border;
   }
 
   .section-header h2 {
-    @apply text-xl md:text-2xl text-primary;
+    @apply text-xl md:text-2xl text-foreground;
   }
 
   /* Breaking news ticker */
   .breaking-news-ticker {
-    @apply bg-red-600 text-white py-2 overflow-hidden;
+    @apply bg-destructive text-white py-2 overflow-hidden;
   }
 
   .breaking-news-ticker .ticker-content {
@@ -221,40 +186,18 @@
     @apply inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110;
   }
 
-  .share-button-facebook {
-    @apply bg-[#1877f2] text-white hover:bg-[#166fe5];
-  }
-
-  .share-button-twitter {
-    @apply bg-[#1da1f2] text-white hover:bg-[#1a91da];
-  }
-
-  .share-button-whatsapp {
-    @apply bg-[#25d366] text-white hover:bg-[#22c55e];
-  }
-
-  .share-button-linkedin {
-    @apply bg-[#0a66c2] text-white hover:bg-[#095196];
-  }
-
-  .share-button-telegram {
-    @apply bg-[#0088cc] text-white hover:bg-[#0077b5];
-  }
-
-  .share-button-email {
-    @apply bg-gray-600 text-white hover:bg-gray-700;
-  }
+  .share-button-facebook { @apply bg-[#1877f2] text-white hover:bg-[#166fe5]; }
+  .share-button-twitter { @apply bg-[#1da1f2] text-white hover:bg-[#1a91da]; }
+  .share-button-whatsapp { @apply bg-[#25d366] text-white hover:bg-[#22c55e]; }
+  .share-button-linkedin { @apply bg-[#0a66c2] text-white hover:bg-[#095196]; }
+  .share-button-telegram { @apply bg-[#0088cc] text-white hover:bg-[#0077b5]; }
+  .share-button-email { @apply bg-muted-foreground text-white hover:bg-foreground; }
 }
 
 @layer utilities {
-  /* Custom animations */
   @keyframes marquee {
-    0% {
-      transform: translateX(100%);
-    }
-    100% {
-      transform: translateX(-100%);
-    }
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
   }
 
   .animate-marquee {
@@ -262,34 +205,23 @@
   }
 
   @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .animate-fade-in {
-    animation: fade-in 0.5s ease-out;
+    animation: fade-in 0.4s ease-out;
   }
 
   @keyframes pulse-dot {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   .animate-pulse-dot {
     animation: pulse-dot 1.5s ease-in-out infinite;
   }
 
-  /* Text utilities */
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -300,13 +232,6 @@
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-4 {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
