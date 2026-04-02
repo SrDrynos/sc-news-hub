@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, CheckCircle } from "lucide-react";
+import { Mail, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,23 +33,23 @@ const Newsletter = () => {
   };
 
   return (
-    <section className="bg-primary text-primary-foreground py-12">
+    <section className="bg-foreground text-background py-16">
       <div className="container">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
-            <Mail className="h-8 w-8" />
+        <div className="max-w-xl mx-auto text-center">
+          <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center mx-auto mb-6">
+            <Mail className="h-6 w-6 text-white" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">
-            Receba as principais notícias no seu e-mail
+          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+            Fique por dentro
           </h2>
-          <p className="text-primary-foreground/80 mb-6">
-            Cadastre-se gratuitamente e receba diariamente um resumo com as notícias mais importantes de Santa Catarina.
+          <p className="text-background/60 mb-8 text-sm">
+            Receba as notícias mais importantes de Santa Catarina diretamente no seu e-mail.
           </p>
 
           {subscribed ? (
-            <div className="flex items-center justify-center gap-2 text-green-400">
-              <CheckCircle className="h-6 w-6" />
-              <span className="font-medium">Inscrição realizada com sucesso!</span>
+            <div className="flex items-center justify-center gap-2 text-emerald-400">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-medium text-sm">Inscrição realizada com sucesso!</span>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -58,20 +58,18 @@ const Newsletter = () => {
                 placeholder="Seu melhor e-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-primary-foreground text-foreground"
+                className="flex-1 bg-background/10 border-background/20 text-background placeholder:text-background/40 focus:border-secondary"
                 required
               />
-              <Button type="submit" variant="secondary" className="px-8" disabled={loading}>
-                {loading ? "Inscrevendo..." : "Inscrever-se"}
+              <Button type="submit" className="bg-secondary hover:bg-secondary/90 text-white px-6" disabled={loading}>
+                {loading ? "..." : <><span>Inscrever</span><ArrowRight className="h-4 w-4 ml-1" /></>}
               </Button>
             </form>
           )}
 
-          <p className="text-xs text-primary-foreground/60 mt-4">
+          <p className="text-xs text-background/30 mt-6">
             Ao se inscrever, você concorda com nossa{" "}
-            <a href="/privacidade" className="underline hover:text-primary-foreground">
-              Política de Privacidade
-            </a>
+            <a href="/privacidade" className="underline hover:text-background/50">Política de Privacidade</a>
           </p>
         </div>
       </div>

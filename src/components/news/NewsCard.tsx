@@ -3,9 +3,6 @@ import { Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// No placeholder — only original source images
-const NO_IMAGE_GRADIENT = "bg-gradient-to-br from-muted to-muted/60";
-
 export interface NewsCardArticle {
   id: string;
   slug?: string | null;
@@ -43,17 +40,17 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
   if (variant === "compact") {
     return (
       <Link to={articleUrl} className="group block">
-        <article className="flex gap-3 py-3 border-b border-border last:border-0">
-          <div className="w-20 h-20 flex-shrink-0 rounded overflow-hidden bg-muted">
+        <article className="flex gap-3 py-3 border-b border-border/50 last:border-0">
+          <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
             {image ? (
-              <img src={image} alt={news.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" onError={handleImageError} />
+              <img src={image} alt={news.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onError={handleImageError} />
             ) : (
-              <div className={`w-full h-full ${NO_IMAGE_GRADIENT}`} />
+              <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h4>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <h4 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors leading-snug">{news.title}</h4>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDate(news.published_at)}
             </p>
@@ -66,17 +63,17 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
   if (variant === "horizontal") {
     return (
       <Link to={articleUrl} className="group block">
-        <article className="news-card bg-card rounded-lg overflow-hidden shadow-sm flex gap-4">
-          <div className="news-card-image w-1/3 aspect-video bg-muted">
+        <article className="bg-card rounded-xl overflow-hidden border border-border/50 flex gap-4 hover:shadow-lg hover:border-border transition-all">
+          <div className="w-1/3 aspect-video bg-muted overflow-hidden">
             {image ? (
-              <img src={image} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+              <img src={image} alt={news.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onError={handleImageError} />
             ) : (
-              <div className={`w-full h-full ${NO_IMAGE_GRADIENT}`} />
+              <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10" />
             )}
           </div>
           <div className="flex-1 p-4">
             <span className={`category-badge category-badge-${categorySlug} mb-2`}>{categoryName}</span>
-            <h3 className="font-heading font-bold text-lg line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h3>
+            <h3 className="font-heading font-bold text-lg line-clamp-2 group-hover:text-secondary transition-colors leading-snug">{news.title}</h3>
             {(news.subtitle || news.excerpt) && (
               <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{news.subtitle || news.excerpt}</p>
             )}
@@ -91,32 +88,30 @@ const NewsCard = ({ news, variant = "default" }: NewsCardProps) => {
   }
 
   return (
-    <Link to={articleUrl} className="group block">
-      <article className="news-card bg-card rounded-lg overflow-hidden shadow-md h-full">
+    <Link to={articleUrl} className="group block h-full">
+      <article className="bg-card rounded-xl overflow-hidden border border-border/50 h-full hover:shadow-lg hover:border-border transition-all duration-300">
         {news.image_url ? (
-          <div className="news-card-image aspect-video bg-muted relative">
-            <img src={news.image_url} alt={news.title} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+          <div className="aspect-video bg-muted relative overflow-hidden">
+            <img src={news.image_url} alt={news.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={handleImageError} />
           </div>
         ) : (
-          <div className={`aspect-video ${NO_IMAGE_GRADIENT} flex items-center justify-center`}>
-            <span className="text-muted-foreground text-sm">Sem imagem</span>
+          <div className="aspect-video bg-gradient-to-br from-primary/5 to-secondary/10 flex items-center justify-center">
+            <span className="text-muted-foreground/40 text-xs">Sem imagem</span>
           </div>
         )}
         <div className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`category-badge category-badge-${categorySlug}`}>{categoryName}</span>
-          </div>
-          <h3 className="font-heading font-bold text-lg line-clamp-2 group-hover:text-secondary transition-colors mb-2">{news.title}</h3>
+          <span className={`category-badge category-badge-${categorySlug} mb-2`}>{categoryName}</span>
+          <h3 className="font-heading font-bold text-base line-clamp-2 group-hover:text-secondary transition-colors leading-snug mb-2">{news.title}</h3>
           {(news.subtitle || news.excerpt) && (
-            <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{news.subtitle || news.excerpt}</p>
+            <p className="text-muted-foreground text-sm line-clamp-2 mb-3 leading-relaxed">{news.subtitle || news.excerpt}</p>
           )}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/50">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDate(news.published_at)}
             </span>
             {news.source_name && (
-              <span className="truncate max-w-[120px]">{news.source_name}</span>
+              <span className="truncate max-w-[120px] font-medium">{news.source_name}</span>
             )}
           </div>
         </div>

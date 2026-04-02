@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { TrendingUp } from "lucide-react";
 import { usePublishedArticles } from "@/hooks/useArticles";
-import NewsCard from "./NewsCard";
 import AdSlot from "@/components/ads/AdSlot";
 
 const Sidebar = () => {
@@ -11,22 +10,22 @@ const Sidebar = () => {
     <aside className="space-y-8">
       <AdSlot position="sidebar" className="hidden lg:flex" />
 
-      <div className="bg-card rounded-lg p-6 shadow-md">
-        <div className="flex items-center gap-2 mb-6 pb-3 border-b-2 border-secondary">
+      <div className="bg-card rounded-xl p-6 border border-border/50">
+        <div className="flex items-center gap-2 mb-6 pb-3 border-b border-border">
           <TrendingUp className="h-5 w-5 text-secondary" />
           <h3 className="font-heading font-bold text-lg">Mais Lidas</h3>
         </div>
         <div className="space-y-1">
           {trending.map((news, index) => (
-            <Link key={news.id} to={`/noticia/${news.slug || news.id}`} className="group flex gap-3 py-3 border-b border-border last:border-0">
-              <span className="text-3xl font-heading font-bold text-muted-foreground/30 group-hover:text-secondary transition-colors">
+            <Link key={news.id} to={`/noticia/${news.slug || news.id}`} className="group flex gap-3 py-3 border-b border-border/30 last:border-0">
+              <span className="text-2xl font-heading font-bold text-border group-hover:text-secondary transition-colors leading-none mt-1">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <div>
-                <span className={`category-badge category-badge-${(news as any).categories?.slug || "sc"} text-[10px] mb-1`}>
+              <div className="flex-1 min-w-0">
+                <span className={`category-badge category-badge-${(news as any).categories?.slug || "geral"} text-[10px] mb-1 px-2 py-0.5`}>
                   {(news as any).categories?.name || "Geral"}
                 </span>
-                <h4 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors">{news.title}</h4>
+                <h4 className="font-heading font-bold text-sm line-clamp-2 group-hover:text-secondary transition-colors leading-snug">{news.title}</h4>
               </div>
             </Link>
           ))}
@@ -36,17 +35,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <AdSlot position="sidebar" className="" />
-
-      <div className="bg-card rounded-lg p-6 shadow-md">
-        <h3 className="font-heading font-bold text-lg mb-4 pb-3 border-b-2 border-secondary">Siga-nos</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1877f2] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"><span className="font-medium text-sm">Facebook</span></a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"><span className="font-medium text-sm">Instagram</span></a>
-          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#1da1f2] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"><span className="font-medium text-sm">Twitter</span></a>
-          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#ff0000] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"><span className="font-medium text-sm">YouTube</span></a>
-        </div>
-      </div>
+      <AdSlot position="sidebar" />
     </aside>
   );
 };
